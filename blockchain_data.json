@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "created": "2025-11-18 15:44:14.231473",
+    "total_blocks": 2,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-11-18 15:40:53.104956",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "hash": "660fb56f9bfdb4cf5f2969fef876ab0844d6380a782e707aca9a6c6b070d8247"
+    },
+    {
+      "index": 1,
+      "timestamp": "2025-11-18 15:44:14.231473",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "pratham",
+        "date": "2025-11-18",
+        "course": "Information Technology",
+        "year": "2024",
+        "present_students": [
+          "Information Technology-2024-01",
+          "Information Technology-2024-02",
+          "Information Technology-2024-03",
+          "Information Technology-2024-04",
+          "Information Technology-2024-05",
+          "Information Technology-2024-06",
+          "Information Technology-2024-07",
+          "Information Technology-2024-08",
+          "Information Technology-2024-09",
+          "Information Technology-2024-10",
+          "Information Technology-2024-11",
+          "Information Technology-2024-12",
+          "Information Technology-2024-13",
+          "Information Technology-2024-14",
+          "Information Technology-2024-15",
+          "Information Technology-2024-16",
+          "Information Technology-2024-17",
+          "Information Technology-2024-18",
+          "Information Technology-2024-19",
+          "Information Technology-2024-20",
+          "Information Technology-2024-21",
+          "Information Technology-2024-22",
+          "Information Technology-2024-23",
+          "Information Technology-2024-24",
+          "Information Technology-2024-25",
+          "Information Technology-2024-26",
+          "Information Technology-2024-27",
+          "Information Technology-2024-28",
+          "Information Technology-2024-29",
+          "Information Technology-2024-30"
+        ]
+      },
+      "prev_hash": "660fb56f9bfdb4cf5f2969fef876ab0844d6380a782e707aca9a6c6b070d8247",
+      "hash": "56675d35e76fc8e45bdafd4d8f2f1052790b6298425eef0d3a5fb5e1f792994b"
+    }
+  ]
+}
