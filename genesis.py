@@ -1,10 +1,9 @@
 import datetime as dt
+from typing import List
 from block import Block
 
-def create_genesis_block():
-    """
-    Create the genesis block (first block in the blockchain)
-    """
+
+def create_genesis_block() -> Block:
     genesis_data = {
         "type": "genesis",
         "message": "Genesis Block - Blockchain Initialized",
@@ -12,8 +11,6 @@ def create_genesis_block():
     }
     return Block(0, dt.datetime.now(), genesis_data, "0")
 
-def create_blockchain():
-    """
-    Initialize a new blockchain with the genesis block
-    """
+
+def create_blockchain() -> List[Block]:
     return [create_genesis_block()]
