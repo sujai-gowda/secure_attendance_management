@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "created": "2025-11-23 20:08:24.143870",
-    "total_blocks": 9,
+    "created": "2025-11-23 20:06:47.474317",
+    "total_blocks": 7,
     "version": "1.0"
   },
   "blocks": [
@@ -262,43 +262,6 @@
       },
       "prev_hash": "85543897c5a5ef0e2477dc821b58036dc6879f12733661d1df40c7668d8427fb",
       "hash": "a8745233191679c462c16ad7a07e3c249b638888183bc53a329efb61afbdf158"
-    },
-    {
-      "index": 7,
-      "timestamp": "2025-11-23 20:08:15.057409",
-      "data": {
-        "type": "student_registration",
-        "teacher_name": "bro",
-        "course": "Information Technology",
-        "year": "2025",
-        "registration_numbers": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5"
-        ],
-        "student_count": 5,
-        "registered_date": "2025-11-23"
-      },
-      "prev_hash": "a8745233191679c462c16ad7a07e3c249b638888183bc53a329efb61afbdf158",
-      "hash": "a5efbca3f35462f079231c59169b95a0b2e89d5e50dbfdd5a619de0426221fcc"
-    },
-    {
-      "index": 8,
-      "timestamp": "2025-11-23 20:08:24.143870",
-      "data": {
-        "type": "attendance",
-        "teacher_name": "bro",
-        "date": "2025-11-23",
-        "course": "Information Technology",
-        "year": "2025",
-        "present_students": [
-          "1"
-        ]
-      },
-      "prev_hash": "a5efbca3f35462f079231c59169b95a0b2e89d5e50dbfdd5a619de0426221fcc",
-      "hash": "c70a8d3eef6d21707fe4a28aecfbf0a703f0a437aad5a2c262062ad2b67ceb6e"
     }
   ]
 }

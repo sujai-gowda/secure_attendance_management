@@ -4,11 +4,17 @@ from flask import Flask, request, render_template, jsonify
 
 # Importing local functions
 from genesis import create_blockchain
-from newBlock import add_block
+from newBlock import add_block, add_registration_block
 from getBlock import find_records, get_all_attendance_records
 from checkChain import check_integrity, get_blockchain_stats
 from persistence import save_blockchain, load_blockchain, export_blockchain_csv
 from analytics import get_attendance_analytics, generate_attendance_report, export_analytics
+from student_database import (
+    check_class_exists, 
+    get_students, 
+    save_students, 
+    get_all_classes
+)
 
 # Flask declarations
 app = Flask(__name__)
@@ -38,6 +44,103 @@ print(f"Blockchain initialized with genesis block: {blockchain[0]}")
 @app.route('/',  methods = ['GET'])
 def index():
     return render_template("index.html")
+
+# Show registration page (if needed manually)
+@app.route('/register-students', methods=['GET'])
+def show_register_students():
+    # Redirect to home if accessed directly
+    return render_template("index.html", error="Please start by entering your name and class details")
+
+# Handle student registration form submission
+@app.route('/register-students', methods=['POST'])
+def handle_register_students():
+    try:
+        teacher_name = request.form.get("teacher_name", "").strip()
+        course = request.form.get("course", "").strip()
+        year = request.form.get("year", "").strip()
+        number = request.form.get("number", "0")
+
+        # Validate inputs
+        if not all([teacher_name, course, year]):
+            return render_template("register_students.html",
+                                 error="Please fill all required fields",
+                                 name=teacher_name,
+                                 course=course,
+                                 year=year,
+                                 number=int(number) if number.isdigit() else 0)
+
+        # Collect all registration numbers from form
+        registration_numbers = []
+        i = 1
+        while request.form.get(f"reg_no{i}"):
+            reg_no = request.form.get(f"reg_no{i}", "").strip()
+            if reg_no:
+                registration_numbers.append(reg_no.upper())
+            i += 1
+
+        # Validate that we have the expected number of students
+        expected_count = int(number) if number.isdigit() else 0
+        if len(registration_numbers) != expected_count:
+            return render_template("register_students.html",
+                                 error=f"Please enter registration numbers for all {expected_count} students. Found {len(registration_numbers)}.",
+                                 name=teacher_name,
+                                 course=course,
+                                 year=year,
+                                 number=expected_count)
+
+        # Check for duplicates
+        if len(registration_numbers) != len(set(registration_numbers)):
+            return render_template("register_students.html",
+                                 error="Error: Duplicate registration numbers found. Please ensure all registration numbers are unique.",
+                                 name=teacher_name,
+                                 course=course,
+                                 year=year,
+                                 number=expected_count)
+
+        # Save to database
+        success, message = save_students(teacher_name, course, year, registration_numbers)
+        if not success:
+            return render_template("register_students.html",
+                                 error=f"Error saving student data: {message}",
+                                 name=teacher_name,
+                                 course=course,
+                                 year=year,
+                                 number=expected_count)
+
+        # Store registration in blockchain as a special block
+        registration_data = {
+            "type": "student_registration",
+            "teacher_name": teacher_name,
+            "course": course,
+            "year": year,
+            "registration_numbers": registration_numbers,
+            "student_count": len(registration_numbers),
+            "registered_date": str(dt.date.today())
+        }
+        
+        result = add_registration_block(registration_data, blockchain)
+        if "Error" not in result:
+            # Auto-save blockchain after adding registration block
+            save_success, save_msg = save_blockchain(blockchain)
+
+        # Now show attendance page with registered students
+        return render_template("attendance.html",
+                            name=teacher_name,
+                            course=course,
+                            year=year,
+                            number=len(registration_numbers),
+                            date=str(dt.date.today()),
+                            registration_numbers=registration_numbers,
+                            is_existing_class=True,
+                            registration_message="Student registration saved successfully!")
+
+    except Exception as e:
+        return render_template("register_students.html",
+                             error=f"An error occurred: {str(e)}",
+                             name=request.form.get("teacher_name", ""),
+                             course=request.form.get("course", ""),
+                             year=request.form.get("year", ""),
+                             number=int(request.form.get("number", "0")) if request.form.get("number", "0").isdigit() else 0)
 
 # Get Form input and decide what is to be done with it
 @app.route('/', methods = ['POST'])
@@ -77,13 +180,29 @@ def parse_request():
                                      name=teacher_name,
                                      date=dt.date.today())
 
-            return render_template("attendance.html",
-                                    name = teacher_name,
-                                    course = course,
-                                    year = year,
-                                    number = student_count,
-                                    date = str(dt.date.today()))
-
+            # Check if this class already exists in database
+            if check_class_exists(teacher_name, course, year):
+                # Class exists - retrieve stored student list and go to attendance
+                student_data = get_students(teacher_name, course, year)
+                if student_data:
+                    registration_numbers = student_data.get("registration_numbers", [])
+                    return render_template("attendance.html",
+                                        name=teacher_name,
+                                        course=course,
+                                        year=year,
+                                        number=len(registration_numbers),
+                                        date=str(dt.date.today()),
+                                        registration_numbers=registration_numbers,
+                                        is_existing_class=True)
+            
+            # New class - show registration page
+            return render_template("register_students.html",
+                                    name=teacher_name,
+                                    course=course,
+                                    year=year,
+                                    number=student_count,
+                                    date=str(dt.date.today()))
+        
         # Step 3: Teacher submits attendance
         elif request.form.get("roll_no1"):
             # Extract form data

@@ -59,3 +59,36 @@ def add_block(form, data, blockchain):
 
     except Exception as e:
         return f"Error adding block: {str(e)}"
+
+def add_registration_block(registration_data, blockchain):
+    """
+    Add a student registration block to the blockchain
+    This block stores the initial registration of students for a class
+    """
+    try:
+        # Validate that we have required data
+        if not all([registration_data.get("teacher_name"), 
+                   registration_data.get("course"),
+                   registration_data.get("year"),
+                   registration_data.get("registration_numbers")]):
+            return "Error: Missing required registration information"
+
+        # Get the last block and create new block
+        if not blockchain:
+            return "Error: Blockchain is empty"
+        
+        previous_block = blockchain[-1]
+        block_to_add = next_block(previous_block, registration_data)
+
+        # Validate the new block
+        if not block_to_add.is_valid():
+            return "Error: Invalid registration block created!"
+
+        # Add to blockchain
+        blockchain.append(block_to_add)
+
+        return "Registration block #{} has been added to the blockchain! {} students registered.".format(
+            block_to_add.index, len(registration_data.get("registration_numbers", [])))
+
+    except Exception as e:
+        return f"Error adding registration block: {str(e)}"

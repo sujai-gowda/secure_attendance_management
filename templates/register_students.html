@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Students - Blockendance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/materialize.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body class="blue-grey lighten-4">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 center-align">
+                <h4 class="blue-grey-text text-darken-2">
+                    <i class="material-icons">person_add</i> Register Students
+                </h4>
+                {% if name %}
+                    <p class="flow-text">Hello {{ name }}, please register students for {{ course }} - {{ year }}</p>
+                    <div class="chip">
+                        <i class="material-icons">group</i> {{ number }} students
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="row">
+            <div class="col s12">
+                <div class="card-panel red lighten-4 red-text text-darken-2">
+                    <i class="material-icons left">error</i>{{ error }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col s12">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">
+                            <i class="material-icons left">assignment</i>
+                            Enter Student Registration Numbers
+                        </span>
+                        <p class="grey-text">Enter the registration numbers for all {{ number }} students. These will be stored and used for all future attendance records.</p>
+
+                        <form action="/register-students" method="post" id="registrationForm">
+                            <!-- Hidden fields to preserve form data -->
+                            <input type="hidden" name="teacher_name" value="{{ name }}">
+                            <input type="hidden" name="course" value="{{ course }}">
+                            <input type="hidden" name="year" value="{{ year }}">
+                            <input type="hidden" name="number" value="{{ number }}">
+
+                            <div class="row">
+                                <div class="col s12">
+                                    <div class="card-panel blue lighten-5">
+                                        <p><strong>Instructions:</strong></p>
+                                        <ul>
+                                            <li>• Enter registration numbers for all {{ number }} students</li>
+                                            <li>• Each registration number should be unique</li>
+                                            <li>• These numbers will be used for all future attendance records</li>
+                                            <li>• You can edit this list later if needed</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col s12">
+                                    <div class="student-registration-list">
+                                        {% for i in range(1, number + 1) %}
+                                        <div class="row student-row">
+                                            <div class="col s12 m8 l6">
+                                                <div class="input-field">
+                                                    <i class="material-icons prefix">badge</i>
+                                                    <input 
+                                                        type="text" 
+                                                        id="reg_no{{ i }}" 
+                                                        name="reg_no{{ i }}" 
+                                                        class="validate" 
+                                                        required
+                                                        placeholder="Enter Registration Number"
+                                                    />
+                                                    <label for="reg_no{{ i }}">Student {{ i }} - Registration Number</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col s12 center-align">
+                                    <button class="btn waves-effect waves-light blue large" type="submit">
+                                        <i class="material-icons left">save</i>Save Registration Numbers
+                                    </button>
+                                    <a href="/" class="btn waves-effect waves-light grey">
+                                        <i class="material-icons left">cancel</i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='js/materialize.js') }}"></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            M.AutoInit();
+            
+            // Focus on first input
+            const firstInput = document.getElementById('reg_no1');
+            if (firstInput) {
+                firstInput.focus();
+            }
+            
+            // Add validation for duplicate registration numbers
+            const form = document.getElementById('registrationForm');
+            form.addEventListener('submit', function(e) {
+                const inputs = document.querySelectorAll('input[name^="reg_no"]');
+                const values = Array.from(inputs).map(input => input.value.trim().toUpperCase());
+                const duplicates = values.filter((value, index) => value && values.indexOf(value) !== index);
+                
+                if (duplicates.length > 0) {
+                    e.preventDefault();
+                    M.toast({
+                        html: 'Error: Duplicate registration numbers found: ' + [...new Set(duplicates)].join(', '), 
+                        classes: 'red'
+                    });
+                    return false;
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .student-row {
+            margin-bottom: 10px;
+        }
+        .student-registration-list {
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+    </style>
+</body>
+</html>
+
+
+
