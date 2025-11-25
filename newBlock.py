@@ -1,27 +1,24 @@
 from block import Block
 import datetime as dt
 import copy
+from typing import List, Dict, Any
 
-def next_block(last_block, data):
-    """
-    Create the next block in the blockchain
-    """
+
+def next_block(last_block: Block, data: Dict[str, Any]) -> Block:
     if not last_block:
         raise ValueError("Previous block cannot be None")
 
     this_index = last_block.index + 1
     this_timestamp = dt.datetime.now()
-    # Deep copy to prevent modification of original data
     this_data = copy.deepcopy(data)
     this_prev_hash = last_block.hash
     return Block(this_index, this_timestamp, this_data, this_prev_hash)
 
-def add_block(form, data, blockchain):
-    """
-    Add a new attendance block to the blockchain
-    """
+
+def add_block(
+    form: Dict[str, Any], data: List[str], blockchain: List[Block]
+) -> str:
     try:
-        # Create attendance data structure
         attendance_data = {
             "type": "attendance",
             "teacher_name": data[0] if len(data) > 0 else "",
@@ -31,31 +28,28 @@ def add_block(form, data, blockchain):
             "present_students": []
         }
 
-        # Collect present students from form
         i = 1
-        while form.get("roll_no{}".format(i)):
-            roll_no = form.get("roll_no{}".format(i))
-            if roll_no:  # Only add non-empty roll numbers
+        while form.get(f"roll_no{i}"):
+            roll_no = form.get(f"roll_no{i}", "").strip()
+            if roll_no:
                 attendance_data["present_students"].append(roll_no)
             i += 1
 
-        # Validate that we have some data
         if not attendance_data["present_students"]:
             return "Error: No students marked present!"
 
-        # Get the last block and create new block
         previous_block = blockchain[-1]
         block_to_add = next_block(previous_block, attendance_data)
 
-        # Validate the new block
         if not block_to_add.is_valid():
             return "Error: Invalid block created!"
 
-        # Add to blockchain
         blockchain.append(block_to_add)
 
-        return "Block #{} has been added to the blockchain! {} students marked present.".format(
-            block_to_add.index, len(attendance_data["present_students"]))
+        return (
+            f"Block #{block_to_add.index} has been added to the blockchain! "
+            f"{len(attendance_data['present_students'])} students marked present."
+        )
 
     except Exception as e:
         return f"Error adding block: {str(e)}"

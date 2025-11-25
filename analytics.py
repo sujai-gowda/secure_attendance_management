@@ -1,13 +1,11 @@
-"""
-Blockchain Analytics Module
-Provides advanced analytics and reporting for the blockchain
-"""
-
 import datetime as dt
-from collections import defaultdict, Counter
+from collections import defaultdict
+from typing import List, Dict, Any, Set, Tuple
 import json
+from block import Block
 
-def get_attendance_analytics(blockchain):
+
+def get_attendance_analytics(blockchain: List[Block]) -> Dict[str, Any]:
     """
     Generate comprehensive attendance analytics
     """
@@ -140,7 +138,7 @@ def get_attendance_analytics(blockchain):
     
     return analytics
 
-def get_blockchain_health(blockchain):
+def get_blockchain_health(blockchain: List[Block]) -> Dict[str, Any]:
     """
     Analyze blockchain health and integrity metrics
     """
@@ -209,7 +207,7 @@ def get_blockchain_health(blockchain):
     
     return health
 
-def generate_attendance_report(blockchain, format="text"):
+def generate_attendance_report(blockchain: List[Block], format: str = "text") -> str:
     """
     Generate a comprehensive attendance report
     """
@@ -257,7 +255,9 @@ def generate_attendance_report(blockchain, format="text"):
     
     return "\n".join(report)
 
-def export_analytics(blockchain, filename="blockchain_analytics.json"):
+def export_analytics(
+    blockchain: List[Block], filename: str = "blockchain_analytics.json"
+) -> Tuple[bool, str]:
     """
     Export comprehensive analytics to file
     """
