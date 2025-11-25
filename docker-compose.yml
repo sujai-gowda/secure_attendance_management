@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blockendance-backend
+    ports:
+      - "5001:5001"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production-min-32-chars}
+      - DEBUG=${DEBUG:-False}
+      - HOST=0.0.0.0
+      - PORT=5001
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///blockendance.db}
+      - USE_DATABASE=${USE_DATABASE:-False}
+      - BLOCKCHAIN_FILE=blockchain_data.json
+      - BACKUP_DIR=blockchain_backups
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./blockchain_data.json:/app/blockchain_data.json
+      - ./blockchain_backups:/app/blockchain_backups
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blockendance-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+

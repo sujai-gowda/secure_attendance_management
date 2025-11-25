@@ -1,232 +1,181 @@
-# Python module imports
 import datetime as dt
+import logging
 from flask import Flask, request, render_template, jsonify
+from flask_cors import CORS
+from typing import Dict, Any
 
-# Importing local functions
-from genesis import create_blockchain
-from newBlock import add_block, add_registration_block
-from getBlock import find_records, get_all_attendance_records
-from checkChain import check_integrity, get_blockchain_stats
-from persistence import save_blockchain, load_blockchain, export_blockchain_csv
-from analytics import get_attendance_analytics, generate_attendance_report, export_analytics
-from student_database import (
-    check_class_exists, 
-    get_students, 
-    save_students, 
-    get_all_classes
-)
+from blockchain_service import BlockchainService
+from config import Config
+from logger_config import setup_logging
+from validators import validate_attendance_form, validate_search_form, sanitize_string
+from auth_service import auth_service
+from rate_limiter import init_rate_limiter
+from api_v1 import api_v1
 
-# Flask declarations
+setup_logging(Config.LOG_FILE)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'blockendance-secret-key-2018'
+app.config['SECRET_KEY'] = Config.SECRET_KEY
 
-# Add cache control headers
+if Config.ENABLE_CSRF:
+    from flask_wtf.csrf import CSRFProtect
+    csrf = CSRFProtect(app)
+    logger.info("CSRF protection enabled")
+else:
+    logger.info("CSRF protection disabled (API-first mode)")
+
+CORS(app, resources={
+    r"/api/*": {"origins": ["http://localhost:3000", "http://localhost:5173"]},
+    r"/*": {"origins": ["http://localhost:3000", "http://localhost:5173"]}
+})
+
+limiter = init_rate_limiter(app)
+
+is_valid, error_msg = Config.validate()
+if not is_valid:
+    if error_msg:
+        logger.warning(f"Configuration validation failed: {error_msg}")
+    else:
+        logger.warning(
+            "SECRET_KEY is using default value. Please set a secure SECRET_KEY in environment variables."
+        )
+
+is_prod_valid, prod_error = Config.validate_production()
+if not is_prod_valid and not Config.DEBUG:
+    logger.error(f"Production configuration invalid: {prod_error}")
+    raise ValueError(f"Invalid production configuration: {prod_error}")
+
+blockchain_service = BlockchainService()
+
+from api_v1 import set_limiter
+set_limiter(limiter)
+
+# Initialize API documentation BEFORE registering blueprint
+# Flask-RESTX needs to add routes to the blueprint before it's registered
+try:
+    from api_docs import init_api
+    init_api()  # Initialize the API docs before blueprint is registered
+except ImportError:
+    pass
+
+app.register_blueprint(api_v1)
+
+logger.info(f"Blockchain initialized with {blockchain_service.get_block_count()} blocks")
+
+
 @app.after_request
 def after_request(response):
-    response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+    response.headers.add(
+        'Cache-Control',
+        'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'
+    )
     return response
 
-# Initializing blockchain with the genesis block
-# Try to load existing blockchain first
-loaded_blockchain, load_message = load_blockchain()
-if loaded_blockchain:
-    blockchain = loaded_blockchain
-    print(f"Loaded existing blockchain: {load_message}")
-else:
-    blockchain = create_blockchain()
-    print(f"Created new blockchain: {load_message}")
-    # Save the new blockchain
-    save_blockchain(blockchain)
 
-print(f"Blockchain initialized with genesis block: {blockchain[0]}")
-
-# Default Landing page of the app
-@app.route('/',  methods = ['GET'])
+@app.route('/', methods=['GET'])
 def index():
     return render_template("index.html")
 
-# Show registration page (if needed manually)
-@app.route('/register-students', methods=['GET'])
-def show_register_students():
-    # Redirect to home if accessed directly
-    return render_template("index.html", error="Please start by entering your name and class details")
 
-# Handle student registration form submission
-@app.route('/register-students', methods=['POST'])
-def handle_register_students():
-    try:
-        teacher_name = request.form.get("teacher_name", "").strip()
-        course = request.form.get("course", "").strip()
-        year = request.form.get("year", "").strip()
-        number = request.form.get("number", "0")
-
-        # Validate inputs
-        if not all([teacher_name, course, year]):
-            return render_template("register_students.html",
-                                 error="Please fill all required fields",
-                                 name=teacher_name,
-                                 course=course,
-                                 year=year,
-                                 number=int(number) if number.isdigit() else 0)
-
-        # Collect all registration numbers from form
-        registration_numbers = []
-        i = 1
-        while request.form.get(f"reg_no{i}"):
-            reg_no = request.form.get(f"reg_no{i}", "").strip()
-            if reg_no:
-                registration_numbers.append(reg_no.upper())
-            i += 1
-
-        # Validate that we have the expected number of students
-        expected_count = int(number) if number.isdigit() else 0
-        if len(registration_numbers) != expected_count:
-            return render_template("register_students.html",
-                                 error=f"Please enter registration numbers for all {expected_count} students. Found {len(registration_numbers)}.",
-                                 name=teacher_name,
-                                 course=course,
-                                 year=year,
-                                 number=expected_count)
-
-        # Check for duplicates
-        if len(registration_numbers) != len(set(registration_numbers)):
-            return render_template("register_students.html",
-                                 error="Error: Duplicate registration numbers found. Please ensure all registration numbers are unique.",
-                                 name=teacher_name,
-                                 course=course,
-                                 year=year,
-                                 number=expected_count)
-
-        # Save to database
-        success, message = save_students(teacher_name, course, year, registration_numbers)
-        if not success:
-            return render_template("register_students.html",
-                                 error=f"Error saving student data: {message}",
-                                 name=teacher_name,
-                                 course=course,
-                                 year=year,
-                                 number=expected_count)
-
-        # Store registration in blockchain as a special block
-        registration_data = {
-            "type": "student_registration",
-            "teacher_name": teacher_name,
-            "course": course,
-            "year": year,
-            "registration_numbers": registration_numbers,
-            "student_count": len(registration_numbers),
-            "registered_date": str(dt.date.today())
-        }
-        
-        result = add_registration_block(registration_data, blockchain)
-        if "Error" not in result:
-            # Auto-save blockchain after adding registration block
-            save_success, save_msg = save_blockchain(blockchain)
-
-        # Now show attendance page with registered students
-        return render_template("attendance.html",
-                            name=teacher_name,
-                            course=course,
-                            year=year,
-                            number=len(registration_numbers),
-                            date=str(dt.date.today()),
-                            registration_numbers=registration_numbers,
-                            is_existing_class=True,
-                            registration_message="Student registration saved successfully!")
-
-    except Exception as e:
-        return render_template("register_students.html",
-                             error=f"An error occurred: {str(e)}",
-                             name=request.form.get("teacher_name", ""),
-                             course=request.form.get("course", ""),
-                             year=request.form.get("year", ""),
-                             number=int(request.form.get("number", "0")) if request.form.get("number", "0").isdigit() else 0)
-
-# Get Form input and decide what is to be done with it
-@app.route('/', methods = ['POST'])
+@app.route('/', methods=['POST'])
+@limiter.limit("10 per minute")
 def parse_request():
     try:
-        # Step 1: Teacher enters name
         if request.form.get("name"):
-            teacher_name = request.form.get("name").strip()
+            teacher_name = sanitize_string(request.form.get("name", ""), max_length=100)
             if not teacher_name:
                 return render_template("index.html", error="Please enter a valid name")
 
-            return render_template("class.html",
-                                    name = teacher_name,
-                                    date = dt.date.today())
+            return render_template(
+                "class.html",
+                name=teacher_name,
+                date=dt.date.today()
+            )
 
-        # Step 2: Teacher enters class details
         elif request.form.get("number"):
-            teacher_name = request.form.get("teacher_name", "").strip()
-            course = request.form.get("course", "").strip()
-            year = request.form.get("year", "").strip()
+            teacher_name = sanitize_string(request.form.get("teacher_name", ""), max_length=100)
+            course = sanitize_string(request.form.get("course", ""), max_length=200)
+            year = sanitize_string(request.form.get("year", ""), max_length=50)
             number = request.form.get("number", "0")
 
-            # Validate inputs
             if not all([teacher_name, course, year]):
-                return render_template("class.html",
-                                     error="Please fill all required fields",
-                                     name=teacher_name,
-                                     date=dt.date.today())
+                return render_template(
+                    "class.html",
+                    error="Please fill all required fields",
+                    name=teacher_name,
+                    date=dt.date.today()
+                )
 
             try:
                 student_count = int(number)
-                if student_count <= 0:
+                if student_count <= 0 or student_count > 500:
                     raise ValueError("Invalid student count")
             except ValueError:
-                return render_template("class.html",
-                                     error="Please enter a valid number of students",
-                                     name=teacher_name,
-                                     date=dt.date.today())
+                return render_template(
+                    "class.html",
+                    error="Please enter a valid number of students (1-500)",
+                    name=teacher_name,
+                    date=dt.date.today()
+                )
 
-            # Check if this class already exists in database
-            if check_class_exists(teacher_name, course, year):
-                # Class exists - retrieve stored student list and go to attendance
-                student_data = get_students(teacher_name, course, year)
-                if student_data:
-                    registration_numbers = student_data.get("registration_numbers", [])
-                    return render_template("attendance.html",
-                                        name=teacher_name,
-                                        course=course,
-                                        year=year,
-                                        number=len(registration_numbers),
-                                        date=str(dt.date.today()),
-                                        registration_numbers=registration_numbers,
-                                        is_existing_class=True)
-            
-            # New class - show registration page
-            return render_template("register_students.html",
-                                    name=teacher_name,
-                                    course=course,
-                                    year=year,
-                                    number=student_count,
-                                    date=str(dt.date.today()))
-        
-        # Step 3: Teacher submits attendance
+            return render_template(
+                "attendance.html",
+                name=teacher_name,
+                course=course,
+                year=year,
+                number=student_count,
+                date=str(dt.date.today())
+            )
+
         elif request.form.get("roll_no1"):
-            # Extract form data
+            form_dict = request.form.to_dict()
+            
+            present_students = []
+            i = 1
+            while form_dict.get(f"roll_no{i}"):
+                roll_no = sanitize_string(form_dict.get(f"roll_no{i}", ""), max_length=50)
+                if roll_no:
+                    present_students.append(roll_no)
+                i += 1
+
+            attendance_data = {
+                "teacher_name": sanitize_string(form_dict.get("teacher_name", ""), max_length=100),
+                "date": form_dict.get("date", ""),
+                "course": sanitize_string(form_dict.get("course", ""), max_length=200),
+                "year": sanitize_string(form_dict.get("year", ""), max_length=50),
+                "present_students": present_students,
+            }
+
+            is_valid, validated_data, error_msg = validate_attendance_form(attendance_data)
+            
+            if not is_valid:
+                return render_template(
+                    "result.html",
+                    result=f"Error: {error_msg}"
+                )
+
             form_data = [
-                request.form.get("teacher_name", "").strip(),
-                request.form.get("date", "").strip(),
-                request.form.get("course", "").strip(),
-                request.form.get("year", "").strip()
+                validated_data["teacher_name"],
+                validated_data["date"].strftime("%Y-%m-%d"),
+                validated_data["course"],
+                validated_data["year"]
             ]
 
-            # Validate required data
-            if not all(form_data):
-                return render_template("result.html",
-                                     result="Error: Missing required information")
+            form_dict_with_rolls = {f"roll_no{i+1}": roll for i, roll in enumerate(validated_data["present_students"])}
+            form_dict_with_rolls.update({
+                "teacher_name": validated_data["teacher_name"],
+                "date": validated_data["date"].strftime("%Y-%m-%d"),
+                "course": validated_data["course"],
+                "year": validated_data["year"],
+            })
 
-            result = add_block(request.form, form_data, blockchain)
+            success, result = blockchain_service.add_attendance_block(
+                form_dict_with_rolls, form_data
+            )
 
-            # Auto-save blockchain after adding new block
-            if "added" in result:
-                save_success, save_msg = save_blockchain(blockchain)
-                if save_success:
-                    result += f" Blockchain automatically saved."
-                else:
-                    result += f" Warning: Failed to save blockchain - {save_msg}"
+            if success and "added" in result.lower():
+                result += " Blockchain automatically saved."
 
             return render_template("result.html", result=result)
 
@@ -234,154 +183,230 @@ def parse_request():
             return render_template("index.html", error="Invalid form submission")
 
     except Exception as e:
+        logger.error(f"Error in parse_request: {str(e)}", exc_info=True)
         return render_template("index.html", error=f"An error occurred: {str(e)}")
 
-# Show page to get information for fetching records
-@app.route('/view.html',  methods = ['GET'])
+
+@app.route('/view.html', methods=['GET'])
 def view():
     return render_template("class.html", view_mode=True)
 
-# Process form input for fetching records from the blockchain
-@app.route('/view.html',  methods = ['POST'])
+
+@app.route('/view.html', methods=['POST'])
+@limiter.limit("20 per minute")
 def show_records():
     try:
-        # Validate form inputs
-        name = request.form.get("name", "").strip()
-        course = request.form.get("course", "").strip()
-        year = request.form.get("year", "").strip()
-        date = request.form.get("date", "").strip()
-        number = request.form.get("number", "0")
+        search_data = {
+            "name": sanitize_string(request.form.get("name", ""), max_length=100),
+            "course": sanitize_string(request.form.get("course", ""), max_length=200),
+            "year": sanitize_string(request.form.get("year", ""), max_length=50),
+            "date": request.form.get("date", ""),
+            "number": request.form.get("number", "0"),
+        }
 
-        if not all([name, course, year, date]):
-            return render_template("class.html",
-                                 view_mode=True,
-                                 error="Please fill all required fields")
+        is_valid, validated_data, error_msg = validate_search_form(search_data)
+        
+        if not is_valid:
+            return render_template(
+                "class.html",
+                view_mode=True,
+                error=f"Validation error: {error_msg}"
+            )
 
-        try:
-            student_count = int(number)
-            if student_count <= 0:
-                raise ValueError("Invalid student count")
-        except ValueError:
-            return render_template("class.html",
-                                 view_mode=True,
-                                 error="Please enter a valid number of students")
+        search_form_dict = {
+            "name": validated_data["name"],
+            "course": validated_data["course"],
+            "year": validated_data["year"],
+            "date": validated_data["date"].strftime("%Y-%m-%d"),
+            "number": str(validated_data["number"]),
+        }
 
-        # Search for records
-        attendance_data = find_records(request.form, blockchain)
+        success, attendance_data = blockchain_service.find_attendance_records(
+            search_form_dict
+        )
 
-        if attendance_data == -1:
-            return render_template("view.html",
-                                name = name,
-                                course = course,
-                                year = year,
-                                date = date,
-                                number = student_count,
-                                status = [],
-                                error = "No records found for the specified criteria")
+        if not success or attendance_data is None:
+            return render_template(
+                "view.html",
+                name=validated_data["name"],
+                course=validated_data["course"],
+                year=validated_data["year"],
+                date=validated_data["date"].strftime("%Y-%m-%d"),
+                number=validated_data["number"],
+                status=[],
+                error="No records found for the specified criteria"
+            )
 
-        return render_template("view.html",
-                                name = name,
-                                course = course,
-                                year = year,
-                                date = date,
-                                number = student_count,
-                                status = attendance_data,
-                                success = f"Found attendance record with {len(attendance_data)} students present")
+        return render_template(
+            "view.html",
+            name=validated_data["name"],
+            course=validated_data["course"],
+            year=validated_data["year"],
+            date=validated_data["date"].strftime("%Y-%m-%d"),
+            number=validated_data["number"],
+            status=attendance_data,
+            success=f"Found attendance record with {len(attendance_data)} students present"
+        )
 
     except Exception as e:
-        return render_template("class.html",
-                             view_mode=True,
-                             error=f"An error occurred: {str(e)}")
+        logger.error(f"Error in show_records: {str(e)}", exc_info=True)
+        return render_template(
+            "class.html",
+            view_mode=True,
+            error=f"An error occurred: {str(e)}"
+        )
 
-# Show page with result of checking blockchain integrity
-@app.route('/result.html',  methods = ['GET'])
+
+@app.route('/result.html', methods=['GET'])
 def check():
     try:
-        integrity_result = check_integrity(blockchain)
-        stats = get_blockchain_stats(blockchain)
-        return render_template("result.html",
-                             result=integrity_result,
-                             stats=stats)
+        integrity_result = blockchain_service.check_chain_integrity()
+        stats = blockchain_service.get_stats()
+        return render_template(
+            "result.html",
+            result=integrity_result,
+            stats=stats
+        )
     except Exception as e:
-        return render_template("result.html",
-                             result=f"Error checking blockchain: {str(e)}")
+        logger.error(f"Error in check: {str(e)}", exc_info=True)
+        return render_template(
+            "result.html",
+            result=f"Error checking blockchain: {str(e)}"
+        )
 
-# API endpoint to get blockchain statistics
+
+@app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def api_login():
+    try:
+        data = request.get_json()
+        username = data.get("username", "").strip()
+        password = data.get("password", "")
+
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        success, error_msg, result = auth_service.authenticate(username, password)
+        
+        if not success:
+            return jsonify({"error": error_msg}), 401
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error in api_login: {str(e)}", exc_info=True)
+        return jsonify({"error": "Login failed"}), 500
+
+
+@app.route('/api/auth/verify', methods=['GET'])
+def api_verify():
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Authorization header missing"}), 401
+
+        token = auth_header.split(" ")[1] if " " in auth_header else None
+        if not token:
+            return jsonify({"error": "Invalid authorization header"}), 401
+
+        is_valid, user_info = auth_service.verify_token(token)
+        if not is_valid:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        return jsonify(user_info), 200
+    except Exception as e:
+        logger.error(f"Error in api_verify: {str(e)}", exc_info=True)
+        return jsonify({"error": "Verification failed"}), 500
+
+
 @app.route('/api/stats', methods=['GET'])
+@limiter.limit("30 per minute")
+@auth_service.require_auth("read")
 def api_stats():
     try:
-        stats = get_blockchain_stats(blockchain)
+        stats = blockchain_service.get_stats()
         return jsonify(stats)
     except Exception as e:
+        logger.error(f"Error in api_stats: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# API endpoint to get all attendance records
+
 @app.route('/api/records', methods=['GET'])
+@limiter.limit("30 per minute")
+@auth_service.require_auth("read")
 def api_records():
     try:
-        records = get_all_attendance_records(blockchain)
+        records = blockchain_service.get_all_records()
         return jsonify({"records": records, "count": len(records)})
     except Exception as e:
+        logger.error(f"Error in api_records: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# API endpoint to get analytics
+
 @app.route('/api/analytics', methods=['GET'])
+@limiter.limit("20 per minute")
+@auth_service.require_auth("read")
 def api_analytics():
     try:
-        analytics = get_attendance_analytics(blockchain)
+        analytics = blockchain_service.get_analytics()
         return jsonify(analytics)
     except Exception as e:
+        logger.error(f"Error in api_analytics: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# API endpoint to export data
+
 @app.route('/api/export/<format>', methods=['GET'])
+@limiter.limit("10 per minute")
+@auth_service.require_auth("read")
 def api_export(format):
     try:
-        if format == 'csv':
-            success, message = export_blockchain_csv(blockchain)
-            return jsonify({"success": success, "message": message})
-        elif format == 'analytics':
-            success, message = export_analytics(blockchain)
-            return jsonify({"success": success, "message": message})
-        elif format == 'json':
-            success, message = save_blockchain(blockchain)
-            return jsonify({"success": success, "message": message})
+        success, message = blockchain_service.export_data(format)
+        if success:
+            return jsonify({"success": True, "message": message})
         else:
-            return jsonify({"error": "Invalid export format"}), 400
+            return jsonify({"error": message}), 400
     except Exception as e:
+        logger.error(f"Error in api_export: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# API endpoint to get attendance report
+
 @app.route('/api/report', methods=['GET'])
+@limiter.limit("20 per minute")
+@auth_service.require_auth("read")
 def api_report():
     try:
         format_type = request.args.get('format', 'json')
+        report = blockchain_service.generate_report(format_type)
+        
         if format_type == 'text':
-            report = generate_attendance_report(blockchain, format='text')
             return report, 200, {'Content-Type': 'text/plain'}
         else:
-            report = generate_attendance_report(blockchain, format='json')
             return report, 200, {'Content-Type': 'application/json'}
     except Exception as e:
+        logger.error(f"Error in api_report: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# API endpoint to load blockchain from file
+
 @app.route('/api/load', methods=['POST'])
+@limiter.limit("5 per minute")
+@auth_service.require_auth("write")
 def api_load():
     try:
-        global blockchain
-        loaded_blockchain, message = load_blockchain()
-        if loaded_blockchain:
-            blockchain = loaded_blockchain
-            return jsonify({"success": True, "message": message, "blocks": len(blockchain)})
+        success, message, blocks = blockchain_service.reload_blockchain()
+        if success:
+            return jsonify({
+                "success": True,
+                "message": message,
+                "blocks": blocks
+            })
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
+        logger.error(f"Error in api_load: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-# Start the flask app when program is executed
+
 if __name__ == "__main__":
-    print("Starting Blockendance - Blockchain-based Attendance System")
-    print(f"Blockchain initialized with {len(blockchain)} blocks")
-    print("Access the application at: http://localhost:5001")
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    logger.info("Starting Blockendance - Blockchain-based Attendance System")
+    logger.info(f"Blockchain initialized with {blockchain_service.get_block_count()} blocks")
+    logger.info(f"Access the application at: http://{Config.HOST}:{Config.PORT}")
+    app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
