@@ -1,29 +1,36 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { GraduationCap, Menu, LogOut, User } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/contexts/AuthContext'
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { GraduationCap, Menu, LogOut, User, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { TEACHERS } from "@/constants/attendance";
 
 const navItems = [
-  { path: '/', label: 'Home' },
-  { path: '/attendance', label: 'Take Attendance', requireAuth: true },
-  { path: '/records', label: 'View Records' },
-  { path: '/students', label: 'Student Search' },
-  { path: '/analytics', label: 'Analytics', requireAuth: true },
-  { path: '/integrity', label: 'Check Integrity', requireAuth: true },
-]
+  { path: "/", label: "Home" },
+  { path: "/attendance", label: "Take Attendance", requireTeacher: true },
+  { path: "/records", label: "View Records" },
+  { path: "/students", label: "Student Search" },
+  { path: "/analytics", label: "Analytics", requireTeacher: true },
+  { path: "/integrity", label: "Check Integrity" },
+];
 
 export default function Navbar() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { user, logout, isAuthenticated } = useAuth()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated, isTeacher } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+    logout();
+    navigate("/");
+  };
+
+  const getDisplayName = () => {
+    if (!user?.username) return user?.username || "";
+    const teacher = TEACHERS.find((t) => t.username === user.username);
+    return teacher?.name || user.username;
+  };
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -36,7 +43,7 @@ export default function Navbar() {
 
           <div className="hidden md:flex md:items-center md:space-x-6">
             {navItems.map((item) => {
-              if (item.requireAuth && !isAuthenticated) return null
+              if (item.requireTeacher && !isTeacher) return null;
               return (
                 <Link
                   key={item.path}
@@ -50,15 +57,14 @@ export default function Navbar() {
                 >
                   {item.label}
                 </Link>
-              )
+              );
             })}
-            {isAuthenticated && user && (
+            {isAuthenticated && user ? (
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4" />
-                  <span className="text-muted-foreground">{user.username}</span>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                    {user.role}
+                  <span className="text-muted-foreground">
+                    {getDisplayName()}
                   </span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -66,6 +72,13 @@ export default function Navbar() {
                   Logout
                 </Button>
               </div>
+            ) : (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login
+                </Link>
+              </Button>
             )}
           </div>
 
@@ -82,7 +95,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 space-y-2">
             {navItems.map((item) => {
-              if (item.requireAuth && !isAuthenticated) return null
+              if (item.requireTeacher && !isTeacher) return null;
               return (
                 <Link
                   key={item.path}
@@ -97,36 +110,44 @@ export default function Navbar() {
                 >
                   {item.label}
                 </Link>
-              )
+              );
             })}
-            {isAuthenticated && user && (
+            {isAuthenticated && user ? (
               <>
                 <div className="px-3 py-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    <span>{user.username}</span>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      {user.role}
-                    </span>
+                    <span>{getDisplayName()}</span>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
                   onClick={() => {
-                    handleLogout()
-                    setMobileMenuOpen(false)
+                    handleLogout();
+                    setMobileMenuOpen(false);
                   }}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout
                 </Button>
               </>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                asChild
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Link to="/login">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login
+                </Link>
+              </Button>
             )}
           </div>
         )}
       </div>
     </nav>
-  )
+  );
 }
-

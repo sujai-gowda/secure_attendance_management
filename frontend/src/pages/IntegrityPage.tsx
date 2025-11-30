@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Link as LinkIcon,
 } from "lucide-react";
 import { apiService, type BlockchainStats } from "@/services/api";
 
@@ -23,12 +27,22 @@ interface IntegrityResult {
   timestamp: string;
 }
 
+interface Block {
+  index: number;
+  hash: string;
+  prev_hash: string;
+  timestamp: string;
+  data: any;
+}
+
 export default function IntegrityPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [integrityResult, setIntegrityResult] =
     useState<IntegrityResult | null>(null);
   const [stats, setStats] = useState<BlockchainStats | null>(null);
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -37,13 +51,27 @@ export default function IntegrityPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [integrityData, statsData] = await Promise.all([
+      const [integrityData, statsData, blocksData] = await Promise.all([
         apiService.checkIntegrity(),
         apiService.getStats(),
+        apiService.getAllBlocks().catch(() => []),
       ]);
 
       setIntegrityResult(integrityData);
       setStats(statsData);
+
+      if (blocksData && blocksData.length > 0) {
+        setBlocks(blocksData);
+      } else if (statsData) {
+        const allBlocks: Block[] = [];
+        if (statsData.genesis_block) {
+          allBlocks.push(statsData.genesis_block);
+        }
+        if (statsData.latest_block && statsData.latest_block.index !== 0) {
+          allBlocks.push(statsData.latest_block);
+        }
+        setBlocks(allBlocks);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -53,6 +81,26 @@ export default function IntegrityPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleBlock = (index: number) => {
+    setExpandedBlocks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Hash copied to clipboard",
+    });
   };
 
   const handleRecheck = async () => {
@@ -216,6 +264,188 @@ export default function IntegrityPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {blocks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Blockchain</CardTitle>
+            <CardDescription>
+              View all blocks in the blockchain chain
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {blocks
+                .sort((a, b) => a.index - b.index)
+                .map((block, idx) => {
+                  const isExpanded = expandedBlocks.has(block.index);
+                  const isGenesis = block.index === 0;
+                  const blockType =
+                    block.data?.type === "attendance"
+                      ? "Attendance"
+                      : "Genesis";
+                  const isLast = idx === blocks.length - 1;
+
+                  return (
+                    <div key={block.index} className="relative">
+                      {!isLast && (
+                        <div className="absolute left-6 top-12 w-0.5 h-8 bg-primary/30" />
+                      )}
+                      <div
+                        className={`border rounded-lg p-4 bg-card hover:bg-accent/50 transition-colors ${
+                          isGenesis
+                            ? "border-primary/50 bg-primary/5"
+                            : "border-border"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div
+                              className={`mt-1 p-2 rounded-full ${
+                                isGenesis
+                                  ? "bg-primary/20 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {isGenesis ? (
+                                <Shield className="h-4 w-4" />
+                              ) : (
+                                <LinkIcon className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-semibold">
+                                  Block #{block.index}
+                                </h3>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded ${
+                                    isGenesis
+                                      ? "bg-primary/10 text-primary"
+                                      : "bg-blue-500/10 text-blue-500"
+                                  }`}
+                                >
+                                  {blockType}
+                                </span>
+                              </div>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground min-w-[100px]">
+                                    Hash:
+                                  </span>
+                                  <code className="font-mono text-xs break-all flex-1">
+                                    {block.hash}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => copyToClipboard(block.hash)}
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {!isGenesis && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground min-w-[100px]">
+                                      Prev Hash:
+                                    </span>
+                                    <code className="font-mono text-xs break-all flex-1">
+                                      {block.prev_hash}
+                                    </code>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() =>
+                                        copyToClipboard(block.prev_hash)
+                                      }
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground min-w-[100px]">
+                                    Timestamp:
+                                  </span>
+                                  <span className="text-xs">
+                                    {new Date(block.timestamp).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleBlock(block.index)}
+                            className="ml-2"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="mt-4 pt-4 border-t space-y-3">
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">
+                                Block Data:
+                              </h4>
+                              <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+                                {JSON.stringify(block.data, null, 2)}
+                              </pre>
+                            </div>
+                            {block.data?.type === "attendance" && (
+                              <div className="grid gap-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">
+                                    Teacher:
+                                  </span>
+                                  <span className="font-medium">
+                                    {block.data.teacher_name || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">
+                                    Course:
+                                  </span>
+                                  <span className="font-medium">
+                                    {block.data.course || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">
+                                    Date:
+                                  </span>
+                                  <span className="font-medium">
+                                    {block.data.date || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">
+                                    Students Present:
+                                  </span>
+                                  <span className="font-medium">
+                                    {block.data.present_students?.length || 0}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

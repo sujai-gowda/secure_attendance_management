@@ -84,9 +84,12 @@ export default function LoginPage() {
             </Button>
           </form>
           <div className="mt-4 p-3 bg-muted rounded-md text-sm text-muted-foreground">
-            <p className="font-semibold mb-1">Default Credentials:</p>
-            <p>Username: <code className="bg-background px-1 rounded">admin</code></p>
-            <p>Password: <code className="bg-background px-1 rounded">admin123</code></p>
+            <p className="font-semibold mb-2">Teacher Credentials:</p>
+            <div className="space-y-1">
+              <p>Teacher 1: <code className="bg-background px-1 rounded">teacher1</code> / <code className="bg-background px-1 rounded">teacher123</code></p>
+              <p>Teacher 2: <code className="bg-background px-1 rounded">teacher2</code> / <code className="bg-background px-1 rounded">teacher123</code></p>
+              <p>Teacher 3: <code className="bg-background px-1 rounded">teacher3</code> / <code className="bg-background px-1 rounded">teacher123</code></p>
+            </div>
           </div>
         </CardContent>
       </Card>

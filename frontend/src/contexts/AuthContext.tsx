@@ -13,6 +13,9 @@ interface AuthContextType {
   logout: () => void
   isAuthenticated: boolean
   loading: boolean
+  role: string
+  isTeacher: boolean
+  isStudent: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -85,6 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token')
   }
 
+  const getRole = (): string => {
+    return user?.role || 'student'
+  }
+
+  const isTeacher = (): boolean => {
+    return getRole() === 'teacher'
+  }
+
+  const isStudent = (): boolean => {
+    return getRole() === 'student'
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -94,6 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAuthenticated: !!token && !!user,
         loading,
+        role: getRole(),
+        isTeacher: isTeacher(),
+        isStudent: isStudent(),
       }}
     >
       {children}
