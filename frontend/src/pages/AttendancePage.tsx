@@ -1,92 +1,113 @@
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
-import { TEACHERS, COURSES, CLASSES } from '@/constants/attendance'
-import { apiService } from '@/services/api'
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+import { TEACHERS, COURSES, CLASSES } from "@/constants/attendance";
+import { apiService } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AttendanceFormData {
-  teacherId: string
-  courseId: string
-  date: string
-  classId: string
-  presentStudents: Set<string>
+  teacherId: string;
+  courseId: string;
+  date: string;
+  classId: string;
+  presentStudents: Set<string>;
 }
 
 export default function AttendancePage() {
-  const { toast } = useToast()
-  const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(false)
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<AttendanceFormData>({
-    teacherId: '',
-    courseId: '',
-    date: new Date().toISOString().split('T')[0],
-    classId: '',
+    teacherId: "",
+    courseId: "",
+    date: new Date().toISOString().split("T")[0],
+    classId: "",
     presentStudents: new Set(),
-  })
+  });
 
-  const selectedClass = CLASSES.find(c => c.id === formData.classId)
-  const selectedTeacher = TEACHERS.find(t => t.id === formData.teacherId)
-  const selectedCourse = COURSES.find(c => c.id === formData.courseId)
+  useEffect(() => {
+    if (user?.username) {
+      const loggedInTeacher = TEACHERS.find(
+        (t) => t.username === user.username
+      );
+      if (loggedInTeacher) {
+        setFormData((prev) => ({ ...prev, teacherId: loggedInTeacher.id }));
+      }
+    }
+  }, [user?.username]);
+
+  const selectedClass = CLASSES.find((c) => c.id === formData.classId);
+  const selectedTeacher = TEACHERS.find((t) => t.id === formData.teacherId);
+  const selectedCourse = COURSES.find((c) => c.id === formData.courseId);
 
   const handleStep1Submit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!formData.teacherId || !formData.courseId || !formData.date) {
       toast({
-        title: 'Error',
-        description: 'Please fill all required fields',
-        variant: 'destructive',
-      })
-      return
+        title: "Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      });
+      return;
     }
-    setStep(2)
-  }
+    setStep(2);
+  };
 
   const handleStep2Submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!formData.classId) {
       toast({
-        title: 'Error',
-        description: 'Please select a class',
-        variant: 'destructive',
-      })
-      return
+        title: "Error",
+        description: "Please select a class",
+        variant: "destructive",
+      });
+      return;
     }
 
     if (formData.presentStudents.size === 0) {
       toast({
-        title: 'Error',
-        description: 'Please mark at least one student as present',
-        variant: 'destructive',
-      })
-      return
+        title: "Error",
+        description: "Please mark at least one student as present",
+        variant: "destructive",
+      });
+      return;
     }
 
     if (!selectedClass || !selectedTeacher || !selectedCourse) {
       toast({
-        title: 'Error',
-        description: 'Please fill all required fields',
-        variant: 'destructive',
-      })
-      return
+        title: "Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       if (!selectedClass || !selectedTeacher || !selectedCourse) {
-        throw new Error('Missing required selections')
+        throw new Error("Missing required selections");
       }
 
-      const currentYear = new Date().getFullYear().toString()
-      const presentRollNos = Array.from(formData.presentStudents).filter(Boolean)
-      
+      const currentYear = new Date().getFullYear().toString();
+      const presentRollNos = Array.from(formData.presentStudents).filter(
+        Boolean
+      );
+
       if (presentRollNos.length === 0) {
-        throw new Error('No students selected')
+        throw new Error("No students selected");
       }
 
       const result = await apiService.submitAttendance({
@@ -95,51 +116,52 @@ export default function AttendancePage() {
         date: formData.date,
         year: currentYear,
         presentStudents: presentRollNos,
-      })
+      });
 
       toast({
-        title: 'Success',
+        title: "Success",
         description: result.message,
-      })
-      
+      });
+
+      const currentTeacherId = formData.teacherId;
       setFormData({
-        teacherId: '',
-        courseId: '',
-        date: new Date().toISOString().split('T')[0],
-        classId: '',
+        teacherId: currentTeacherId,
+        courseId: "",
+        date: new Date().toISOString().split("T")[0],
+        classId: "",
         presentStudents: new Set(),
-      })
-      setStep(1)
+      });
+      setStep(1);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to submit attendance. Please try again.',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to submit attendance. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const toggleStudent = (rollNo: string) => {
-    setFormData(prev => {
-      const newPresentStudents = new Set(prev.presentStudents)
+    setFormData((prev) => {
+      const newPresentStudents = new Set(prev.presentStudents);
       if (newPresentStudents.has(rollNo)) {
-        newPresentStudents.delete(rollNo)
+        newPresentStudents.delete(rollNo);
       } else {
-        newPresentStudents.add(rollNo)
+        newPresentStudents.add(rollNo);
       }
-      return { ...prev, presentStudents: newPresentStudents }
-    })
-  }
+      return { ...prev, presentStudents: newPresentStudents };
+    });
+  };
 
   const handleClassChange = (classId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       classId,
       presentStudents: new Set(),
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -154,8 +176,8 @@ export default function AttendancePage() {
         <CardHeader>
           <CardTitle>Step {step} of 2</CardTitle>
           <CardDescription>
-            {step === 1 && 'Select teacher, course, and date'}
-            {step === 2 && 'Select class and mark students present'}
+            {step === 1 && "Select teacher, course, and date"}
+            {step === 2 && "Select class and mark students present"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,27 +188,43 @@ export default function AttendancePage() {
                 <Select
                   id="teacher"
                   value={formData.teacherId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, teacherId: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      teacherId: e.target.value,
+                    }))
+                  }
                   required
+                  disabled={!!user?.username}
                 >
                   <option value="">Select a teacher</option>
-                  {TEACHERS.map(teacher => (
+                  {TEACHERS.map((teacher) => (
                     <option key={teacher.id} value={teacher.id}>
                       {teacher.name}
                     </option>
                   ))}
                 </Select>
+                {user?.username && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Teacher is automatically selected based on your login
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="course">Course</Label>
                 <Select
                   id="course"
                   value={formData.courseId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, courseId: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      courseId: e.target.value,
+                    }))
+                  }
                   required
                 >
                   <option value="">Select a course</option>
-                  {COURSES.map(course => (
+                  {COURSES.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.name}
                     </option>
@@ -199,11 +237,15 @@ export default function AttendancePage() {
                   id="date"
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, date: e.target.value }))
+                  }
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">Next</Button>
+              <Button type="submit" className="w-full">
+                Next
+              </Button>
             </form>
           )}
 
@@ -218,7 +260,7 @@ export default function AttendancePage() {
                   required
                 >
                   <option value="">Select a class</option>
-                  {CLASSES.map(cls => (
+                  {CLASSES.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
                     </option>
@@ -246,14 +288,19 @@ export default function AttendancePage() {
                           htmlFor={`student-${student.rollNo}`}
                           className="flex-1 cursor-pointer text-sm"
                         >
-                          <span className="font-medium">Roll No: {student.rollNo}</span>
-                          <span className="ml-2 text-muted-foreground">{student.name}</span>
+                          <span className="font-medium">
+                            Roll No: {student.rollNo}
+                          </span>
+                          <span className="ml-2 text-muted-foreground">
+                            {student.name}
+                          </span>
                         </label>
                       </div>
                     ))}
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    {formData.presentStudents.size} of {selectedClass.students.length} students marked as present
+                    {formData.presentStudents.size} of{" "}
+                    {selectedClass.students.length} students marked as present
                   </p>
                 </div>
               )}
@@ -277,5 +324,5 @@ export default function AttendancePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -3,7 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Layout from '@/components/layout/Layout'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import TeacherRoute from '@/components/TeacherRoute'
 import HomePage from '@/pages/HomePage'
 import LoginPage from '@/pages/LoginPage'
 import AttendancePage from '@/pages/AttendancePage'
@@ -29,11 +29,11 @@ function App() {
                       <Route
                         path="/attendance"
                         element={
-                          <ProtectedRoute>
+                          <TeacherRoute>
                             <ErrorBoundary>
                               <AttendancePage />
                             </ErrorBoundary>
-                          </ProtectedRoute>
+                          </TeacherRoute>
                         }
                       />
                       <Route path="/records" element={<RecordsPage />} />
@@ -41,23 +41,14 @@ function App() {
                       <Route
                         path="/analytics"
                         element={
-                          <ProtectedRoute>
+                          <TeacherRoute>
                             <ErrorBoundary>
                               <AnalyticsPage />
                             </ErrorBoundary>
-                          </ProtectedRoute>
+                          </TeacherRoute>
                         }
                       />
-                      <Route
-                        path="/integrity"
-                        element={
-                          <ProtectedRoute>
-                            <ErrorBoundary>
-                              <IntegrityPage />
-                            </ErrorBoundary>
-                          </ProtectedRoute>
-                        }
-                      />
+                      <Route path="/integrity" element={<IntegrityPage />} />
                     </Routes>
                   </Layout>
                 </ErrorBoundary>
