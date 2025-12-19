@@ -15,12 +15,14 @@ class TestBlockchainService:
             "roll_no2": "002",
             "roll_no3": "003",
         }
-        attendance_data = [
-            "Test Teacher",
-            "2024-01-01",
-            "Test Course",
-            "2024"
-        ]
+        attendance_data = {
+            "teacher_name": "Test Teacher",
+            "date": "2024-01-01",
+            "course": "Test Course",
+            "year": "2024",
+            "class_id": "CLS-TEST",
+            "class_name": "Test Class"
+        }
 
         success, result = blockchain_service.add_attendance_block(
             form_data, attendance_data
@@ -32,12 +34,12 @@ class TestBlockchainService:
 
     def test_add_attendance_block_no_students(self, blockchain_service):
         form_data = {}
-        attendance_data = [
-            "Test Teacher",
-            "2024-01-01",
-            "Test Course",
-            "2024"
-        ]
+        attendance_data = {
+            "teacher_name": "Test Teacher",
+            "date": "2024-01-01",
+            "course": "Test Course",
+            "year": "2024",
+        }
 
         success, result = blockchain_service.add_attendance_block(
             form_data, attendance_data
@@ -51,12 +53,14 @@ class TestBlockchainService:
             "roll_no1": "001",
             "roll_no2": "002",
         }
-        attendance_data = [
-            "Test Teacher",
-            "2024-01-01",
-            "Test Course",
-            "2024"
-        ]
+        attendance_data = {
+            "teacher_name": "Test Teacher",
+            "date": "2024-01-01",
+            "course": "Test Course",
+            "year": "2024",
+            "class_id": "CLS-TEST",
+            "class_name": "Test Class"
+        }
 
         blockchain_service.add_attendance_block(form_data, attendance_data)
 

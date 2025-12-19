@@ -14,6 +14,7 @@ class Config:
     PORT: int = int(os.getenv("PORT", "5001"))
     
     BLOCKCHAIN_FILE: str = os.getenv("BLOCKCHAIN_FILE", "blockchain_data.json")
+    CLASSES_FILE: str = os.getenv("CLASSES_FILE", "classes_data.json")
     BACKUP_DIR: str = os.getenv("BACKUP_DIR", "blockchain_backups")
     
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

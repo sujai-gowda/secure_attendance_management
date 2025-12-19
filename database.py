@@ -1,4 +1,14 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Text,
+    JSON,
+    ForeignKey,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.pool import QueuePool
@@ -53,6 +63,55 @@ class UserModel(Base):
             'username': self.username,
             'role': self.role,
             'email': self.email,
+            'created_at': str(self.created_at),
+        }
+
+
+class ClassroomModel(Base):
+    __tablename__ = 'classrooms'
+
+    id = Column(String(64), primary_key=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    expected_student_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    students = relationship("StudentModel", back_populates="classroom", cascade="all, delete-orphan")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'expected_student_count': self.expected_student_count,
+            'created_at': str(self.created_at),
+            'updated_at': str(self.updated_at),
+            'students': [student.to_dict() for student in self.students],
+        }
+
+
+class StudentModel(Base):
+    __tablename__ = 'students'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    classroom_id = Column(String(64), ForeignKey('classrooms.id', ondelete='CASCADE'), nullable=False, index=True)
+    roll_number = Column(String(100), nullable=False)
+    name = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    classroom = relationship("ClassroomModel", back_populates="students")
+
+    __table_args__ = (
+        UniqueConstraint('classroom_id', 'roll_number', name='uq_classroom_roll'),
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'classroom_id': self.classroom_id,
+            'roll_number': self.roll_number,
+            'name': self.name,
             'created_at': str(self.created_at),
         }
 

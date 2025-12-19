@@ -20,6 +20,9 @@ from api_schemas import (
     PaginationSchema,
     AttendanceSubmissionRequestSchema,
     AttendanceSubmissionResponseSchema,
+    CreateClassroomRequestSchema,
+    AddStudentsRequestSchema,
+    ClassroomResponseSchema,
 )
 from validators import validate_attendance_form
 
@@ -451,12 +454,32 @@ def submit_attendance():
         data = schema.load(request.get_json() or {})
         
         blockchain_service: BlockchainService = g.blockchain_service
+        classroom_service = getattr(g, 'classroom_service', None)
+        
+        if classroom_service is None:
+            return jsonify(create_error_response(
+                "service_unavailable",
+                "Classroom service is not available",
+                503
+            )), 503
+        
+        class_id = data["class_id"].strip()
+        classroom = classroom_service.get_classroom(class_id)
+        
+        if not classroom:
+            return jsonify(create_error_response(
+                "not_found",
+                f"Classroom {class_id} not found",
+                404
+            )), 404
         
         attendance_data = {
             "teacher_name": data["teacher_name"],
             "date": data["date"].strftime("%Y-%m-%d"),
             "course": data["course"],
             "year": data["year"],
+            "class_id": classroom.id,
+            "class_name": classroom.name,
             "present_students": data["present_students"],
         }
         
@@ -469,12 +492,31 @@ def submit_attendance():
                 400
             )), 400
         
-        form_data = [
-            validated_data["teacher_name"],
-            validated_data["date"].strftime("%Y-%m-%d"),
-            validated_data["course"],
-            validated_data["year"]
+        roster_rolls = {
+            student.roll_number.strip().lower()
+            for student in classroom.students
+            if student.roll_number
+        }
+        invalid_rolls = [
+            roll for roll in validated_data["present_students"]
+            if roll.strip().lower() not in roster_rolls
         ]
+        
+        if invalid_rolls:
+            return jsonify(create_error_response(
+                "validation_error",
+                f"Roll number(s) {', '.join(invalid_rolls)} are not part of classroom {classroom.name}",
+                400
+            )), 400
+        
+        attendance_payload = {
+            "teacher_name": validated_data["teacher_name"],
+            "date": validated_data["date"].strftime("%Y-%m-%d"),
+            "course": validated_data["course"],
+            "year": validated_data["year"],
+            "class_id": classroom.id,
+            "class_name": classroom.name,
+        }
         
         form_dict_with_rolls = {f"roll_no{i+1}": roll for i, roll in enumerate(validated_data["present_students"])}
         form_dict_with_rolls.update({
@@ -482,10 +524,12 @@ def submit_attendance():
             "date": validated_data["date"].strftime("%Y-%m-%d"),
             "course": validated_data["course"],
             "year": validated_data["year"],
+            "class_id": classroom.id,
+            "class_name": classroom.name,
         })
         
         success, result = blockchain_service.add_attendance_block(
-            form_dict_with_rolls, form_data
+            form_dict_with_rolls, attendance_payload
         )
         
         if not success:
@@ -507,7 +551,8 @@ def submit_attendance():
         response_data = {
             "message": result,
             "block_index": block_index_match,
-            "students_count": students_count
+            "students_count": students_count,
+            "class_id": classroom.id,
         }
         
         return jsonify(create_success_response(
@@ -531,8 +576,195 @@ def submit_attendance():
         )), 500
 
 
+@api_v1.route('/classrooms', methods=['POST'])
+@limiter.limit("10 per minute")
+def create_classroom():
+    """Create a new classroom"""
+    try:
+        schema = CreateClassroomRequestSchema()
+        data = schema.load(request.get_json() or {})
+        
+        classroom_service: ClassroomService = g.classroom_service
+        
+        classroom = classroom_service.create_classroom(
+            name=data['name'],
+            expected_student_count=data['expected_student_count'],
+            description=data.get('description', '')
+        )
+        
+        response_data = classroom.to_dict()
+        response_data['current_student_count'] = len(classroom.students)
+        
+        return jsonify(create_success_response(
+            response_data,
+            "Classroom created successfully"
+        )), 201
+        
+    except ValidationError as err:
+        return jsonify(create_error_response(
+            "validation_error",
+            "Invalid request data",
+            400,
+            err.messages
+        )), 400
+    except ValueError as e:
+        return jsonify(create_error_response(
+            "validation_error",
+            str(e),
+            400
+        )), 400
+    except Exception as e:
+        logger.error(f"Error in create_classroom: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to create classroom",
+            500
+        )), 500
+
+
+@api_v1.route('/classrooms', methods=['GET'])
+@limiter.limit("30 per minute")
+def list_classrooms():
+    """List all classrooms"""
+    try:
+        classroom_service: ClassroomService = g.classroom_service
+        
+        classrooms = classroom_service.list_classrooms()
+        
+        response_data = []
+        for classroom in classrooms:
+            classroom_dict = classroom.to_dict()
+            classroom_dict['current_student_count'] = len(classroom.students)
+            response_data.append(classroom_dict)
+        
+        return jsonify(create_success_response(response_data)), 200
+        
+    except Exception as e:
+        logger.error(f"Error in list_classrooms: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to retrieve classrooms",
+            500
+        )), 500
+
+
+@api_v1.route('/classrooms/<class_id>', methods=['GET'])
+@limiter.limit("30 per minute")
+def get_classroom(class_id: str):
+    """Get classroom details including roster"""
+    try:
+        if not class_id or not class_id.strip():
+            return jsonify(create_error_response(
+                "validation_error",
+                "Classroom ID is required",
+                400
+            )), 400
+        
+        classroom_service: ClassroomService = g.classroom_service
+        classroom = classroom_service.get_classroom(class_id.strip())
+        
+        if not classroom:
+            return jsonify(create_error_response(
+                "not_found",
+                f"Classroom {class_id} not found",
+                404
+            )), 404
+        
+        response_data = classroom.to_dict()
+        response_data['current_student_count'] = len(classroom.students)
+        
+        return jsonify(create_success_response(response_data)), 200
+        
+    except Exception as e:
+        logger.error(f"Error in get_classroom: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to retrieve classroom",
+            500
+        )), 500
+
+
+@api_v1.route('/classrooms/<class_id>/students', methods=['POST'])
+@limiter.limit("10 per minute")
+def add_students_to_classroom(class_id: str):
+    """Register students for a class"""
+    try:
+        if not class_id or not class_id.strip():
+            return jsonify(create_error_response(
+                "validation_error",
+                "Classroom ID is required",
+                400
+            )), 400
+        
+        schema = AddStudentsRequestSchema()
+        data = schema.load(request.get_json() or {})
+        
+        classroom_service: ClassroomService = g.classroom_service
+        
+        # Check if classroom exists
+        classroom = classroom_service.get_classroom(class_id.strip())
+        if not classroom:
+            return jsonify(create_error_response(
+                "not_found",
+                f"Classroom {class_id} not found",
+                404
+            )), 404
+        
+        # Validate max student count
+        new_students_count = len(data['students'])
+        current_student_count = len(classroom.students)
+        total_after_add = current_student_count + new_students_count
+        
+        if classroom.expected_student_count > 0 and total_after_add > classroom.expected_student_count:
+            return jsonify(create_error_response(
+                "validation_error",
+                f"Cannot add {new_students_count} students. "
+                f"Classroom has {current_student_count} students and maximum is {classroom.expected_student_count}. "
+                f"Only {classroom.expected_student_count - current_student_count} more students can be added.",
+                400
+            )), 400
+        
+        # Add students
+        updated_classroom = classroom_service.add_students_to_class(
+            class_id.strip(),
+            data['students']
+        )
+        
+        response_data = updated_classroom.to_dict()
+        response_data['current_student_count'] = len(updated_classroom.students)
+        
+        return jsonify(create_success_response(
+            response_data,
+            f"Successfully added {new_students_count} student(s) to classroom"
+        )), 200
+        
+    except ValidationError as err:
+        return jsonify(create_error_response(
+            "validation_error",
+            "Invalid request data",
+            400,
+            err.messages
+        )), 400
+    except ValueError as e:
+        return jsonify(create_error_response(
+            "validation_error",
+            str(e),
+            400
+        )), 400
+    except Exception as e:
+        logger.error(f"Error in add_students_to_classroom: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to add students to classroom",
+            500
+        )), 500
+
+
 @api_v1.before_request
-def inject_blockchain_service():
+def inject_services():
     from blockchain import blockchain_service
+    from classroom_service import ClassroomService
     g.blockchain_service = blockchain_service
+    if not hasattr(g, 'classroom_service'):
+        g.classroom_service = ClassroomService(seed=True)
 

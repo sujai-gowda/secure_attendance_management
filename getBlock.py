@@ -55,6 +55,8 @@ def get_all_attendance_records(blockchain: List[Block]) -> List[Dict[str, Any]]:
                 "date": block.data.get("date", ""),
                 "course": block.data.get("course", ""),
                 "year": block.data.get("year", ""),
+                "class_id": block.data.get("class_id"),
+                "class_name": block.data.get("class_name"),
                 "present_students": block.data.get("present_students", []),
                 "student_count": len(block.data.get("present_students", []))
             })
@@ -74,6 +76,8 @@ def search_by_student(blockchain: List[Block], roll_no: str) -> List[Dict[str, A
                     "date": block.data.get("date", ""),
                     "course": block.data.get("course", ""),
                     "year": block.data.get("year", ""),
-                    "teacher_name": block.data.get("teacher_name", "")
+                    "teacher_name": block.data.get("teacher_name", ""),
+                    "class_id": block.data.get("class_id"),
+                    "class_name": block.data.get("class_name"),
                 })
     return student_records

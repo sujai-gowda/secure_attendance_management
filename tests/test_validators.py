@@ -13,6 +13,7 @@ class TestValidators:
             "date": "2024-01-15",
             "course": "Data Structures",
             "year": "2024",
+            "class_id": "CLS-1234",
             "present_students": ["001", "002", "003"]
         }
 
@@ -41,6 +42,7 @@ class TestValidators:
             "date": "2024-01-15",
             "course": "Data Structures",
             "year": "2024",
+            "class_id": "CLS-1234",
             "present_students": []
         }
 
@@ -58,6 +60,7 @@ class TestValidators:
             "date": future_date,
             "course": "Data Structures",
             "year": "2024",
+            "class_id": "CLS-1234",
             "present_students": ["001"]
         }
 
@@ -115,6 +118,7 @@ class TestValidators:
             "date": "2024-01-15",
             "course": "Data Structures",
             "year": "2024",
+            "class_id": "CLS-1234",
             "present_students": ["001"]
         }
 

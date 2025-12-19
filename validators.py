@@ -60,6 +60,8 @@ class AttendanceFormSchema(Schema):
     date = fields.Date(required=True, format='%Y-%m-%d')
     course = CourseField(required=True)
     year = YearField(required=True)
+    class_id = fields.String(required=True, validate=validate.Length(min=1, max=64))
+    class_name = fields.String(required=False, allow_none=True, validate=validate.Length(max=200))
     present_students = fields.List(
         RollNumberField(),
         required=True,
