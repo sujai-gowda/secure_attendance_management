@@ -91,17 +91,53 @@ class BlockchainService:
     def get_blockchain(self) -> List[Block]:
         return self.blockchain
 
+    def _normalize_attendance_metadata(self, attendance_data: Any) -> Dict[str, Any]:
+        """Support legacy list payloads and new dict-based metadata."""
+        if isinstance(attendance_data, dict):
+            return {
+                "teacher_name": attendance_data.get("teacher_name", ""),
+                "date": attendance_data.get("date", ""),
+                "course": attendance_data.get("course", ""),
+                "year": attendance_data.get("year", ""),
+                "class_id": attendance_data.get("class_id"),
+                "class_name": attendance_data.get("class_name"),
+            }
+
+        # Legacy list/tuple format: [teacher, date, course, year]
+        if isinstance(attendance_data, (list, tuple)):
+            return {
+                "teacher_name": attendance_data[0] if len(attendance_data) > 0 else "",
+                "date": attendance_data[1] if len(attendance_data) > 1 else "",
+                "course": attendance_data[2] if len(attendance_data) > 2 else "",
+                "year": attendance_data[3] if len(attendance_data) > 3 else "",
+                "class_id": None,
+                "class_name": None,
+            }
+
+        return {
+            "teacher_name": "",
+            "date": "",
+            "course": "",
+            "year": "",
+            "class_id": None,
+            "class_name": None,
+        }
+
     def add_attendance_block(
-        self, form_data: Dict[str, Any], attendance_data: List[str]
+        self, form_data: Dict[str, Any], attendance_data: Any
     ) -> Tuple[bool, str]:
         try:
+            metadata = self._normalize_attendance_metadata(attendance_data)
+
             with self._lock:
                 attendance_dict = {
                     "type": "attendance",
-                    "teacher_name": attendance_data[0] if len(attendance_data) > 0 else "",
-                    "date": attendance_data[1] if len(attendance_data) > 1 else "",
-                    "course": attendance_data[2] if len(attendance_data) > 2 else "",
-                    "year": attendance_data[3] if len(attendance_data) > 3 else "",
+                    "teacher_name": metadata.get("teacher_name", ""),
+                    "date": metadata.get("date", ""),
+                    "course": metadata.get("course", ""),
+                    "year": metadata.get("year", ""),
+                    "class_id": metadata.get("class_id"),
+                    "class_name": metadata.get("class_name"),
                     "present_students": []
                 }
 

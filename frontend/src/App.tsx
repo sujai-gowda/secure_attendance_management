@@ -11,6 +11,7 @@ import RecordsPage from '@/pages/RecordsPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import IntegrityPage from '@/pages/IntegrityPage'
 import StudentSearchPage from '@/pages/StudentSearchPage'
+import AddClassPage from '@/pages/AddClassPage'
 
 function App() {
   return (
@@ -38,6 +39,16 @@ function App() {
                       />
                       <Route path="/records" element={<RecordsPage />} />
                       <Route path="/students" element={<StudentSearchPage />} />
+                      <Route
+                        path="/add-class"
+                        element={
+                          <TeacherRoute>
+                            <ErrorBoundary>
+                              <AddClassPage />
+                            </ErrorBoundary>
+                          </TeacherRoute>
+                        }
+                      />
                       <Route
                         path="/analytics"
                         element={

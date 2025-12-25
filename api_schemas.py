@@ -53,6 +53,8 @@ class AttendanceRecordSchema(Schema):
     date = fields.String(required=True)
     course = fields.String(required=True)
     year = fields.String(required=True)
+    class_id = fields.String(required=False, allow_none=True)
+    class_name = fields.String(required=False, allow_none=True)
     present_students = fields.List(fields.String(), required=True)
     student_count = fields.Integer(required=True)
 
@@ -81,6 +83,7 @@ class AttendanceSubmissionRequestSchema(Schema):
     course = fields.String(required=True, validate=validate.Length(min=1, max=200))
     date = fields.Date(required=True, format='%Y-%m-%d')
     year = fields.String(required=True, validate=validate.Length(min=1, max=50))
+    class_id = fields.String(required=True, validate=validate.Length(min=1, max=64))
     present_students = fields.List(
         fields.String(validate=validate.Length(min=1, max=50)),
         required=True,
@@ -93,6 +96,7 @@ class AttendanceSubmissionResponseSchema(Schema):
     message = fields.String(required=True)
     block_index = fields.Integer(required=False)
     students_count = fields.Integer(required=False)
+    class_id = fields.String(required=False)
 
 
 class StudentRecordSchema(Schema):
@@ -106,6 +110,37 @@ class StudentSearchResponseSchema(Schema):
     roll_no = fields.String(required=True)
     records = fields.List(fields.Nested(StudentRecordSchema), required=True)
     total_records = fields.Integer(required=True)
+
+
+# Classroom API Schemas
+class StudentProfileSchema(Schema):
+    roll_number = fields.String(required=True, validate=validate.Length(min=1, max=50))
+    name = fields.String(required=True, validate=validate.Length(min=1, max=200))
+
+
+class CreateClassroomRequestSchema(Schema):
+    name = fields.String(required=True, validate=validate.Length(min=1, max=200))
+    expected_student_count = fields.Integer(required=True, validate=validate.Range(min=0, max=1000))
+    description = fields.String(required=False, validate=validate.Length(max=500), missing="")
+
+
+class AddStudentsRequestSchema(Schema):
+    students = fields.List(
+        fields.Nested(StudentProfileSchema),
+        required=True,
+        validate=validate.Length(min=1, max=500, error="Must have between 1 and 500 students")
+    )
+
+
+class ClassroomResponseSchema(Schema):
+    id = fields.String(required=True)
+    name = fields.String(required=True)
+    description = fields.String(required=False, missing="")
+    expected_student_count = fields.Integer(required=True)
+    students = fields.List(fields.Nested(StudentProfileSchema), required=True)
+    created_at = fields.String(required=True)
+    updated_at = fields.String(required=True)
+    current_student_count = fields.Integer(required=False)
 
 
 def create_error_response(

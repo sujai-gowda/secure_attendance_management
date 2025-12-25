@@ -1,11 +1,21 @@
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy import desc, and_, func
+from sqlalchemy.exc import IntegrityError
 
-from database import db_service, BlockModel, UserModel
+from database import (
+    db_service,
+    BlockModel,
+    UserModel,
+    ClassroomModel,
+    StudentModel,
+)
 from block import Block
 import logging
+from datetime import datetime
+
+from classroom_models import Classroom, StudentProfile
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +206,131 @@ class DatabaseUserService:
             return session.query(UserModel).filter(UserModel.username == username).first()
         finally:
             session.close()
+
+
+class DatabaseClassroomRepository:
+    def __init__(self):
+        self.db = db_service
+
+    def list_classrooms(self) -> List[Classroom]:
+        session = self.db.get_session()
+        try:
+            models = session.query(ClassroomModel).order_by(ClassroomModel.created_at.asc()).all()
+            return [self._to_domain(model) for model in models]
+        finally:
+            session.close()
+
+    def get_classroom(self, class_id: str) -> Optional[Classroom]:
+        session = self.db.get_session()
+        try:
+            model = session.query(ClassroomModel).filter(ClassroomModel.id == class_id).first()
+            return self._to_domain(model) if model else None
+        finally:
+            session.close()
+
+    def get_classroom_by_name(self, name: str) -> Optional[Classroom]:
+        if not name:
+            return None
+        session = self.db.get_session()
+        try:
+            model = (
+                session.query(ClassroomModel)
+                .filter(func.lower(ClassroomModel.name) == name.strip().lower())
+                .first()
+            )
+            return self._to_domain(model) if model else None
+        finally:
+            session.close()
+
+    def save_classroom(self, classroom: Classroom) -> Classroom:
+        session = self.db.get_session()
+        try:
+            model = session.query(ClassroomModel).filter(ClassroomModel.id == classroom.id).first()
+            if not model:
+                model = ClassroomModel(
+                    id=classroom.id,
+                    name=classroom.name,
+                    description=classroom.description,
+                    expected_student_count=classroom.expected_student_count,
+                    created_at=classroom.created_at,
+                    updated_at=classroom.updated_at,
+                )
+                session.add(model)
+            else:
+                model.name = classroom.name
+                model.description = classroom.description
+                model.expected_student_count = classroom.expected_student_count
+                model.updated_at = datetime.utcnow()
+
+            # Replace student roster with provided list, if any
+            if classroom.students:
+                model.students.clear()
+                for student in classroom.students:
+                    model.students.append(
+                        StudentModel(
+                            classroom_id=classroom.id,
+                            roll_number=student.roll_number,
+                            name=student.name,
+                        )
+                    )
+
+            session.commit()
+            session.refresh(model)
+            return self._to_domain(model)
+        except IntegrityError as exc:
+            session.rollback()
+            raise ValueError(str(exc)) from exc
+        finally:
+            session.close()
+
+    def add_students(self, class_id: str, students: List[StudentProfile]) -> Classroom:
+        session = self.db.get_session()
+        try:
+            model = session.query(ClassroomModel).filter(ClassroomModel.id == class_id).first()
+            if not model:
+                raise ValueError(f"Classroom {class_id} not found")
+
+            existing_rolls = {student.roll_number.strip().lower() for student in model.students}
+            for student in students:
+                normalized_roll = student.roll_number.strip().lower()
+                if normalized_roll in existing_rolls:
+                    raise ValueError(f"Roll number '{student.roll_number}' already exists in class")
+                existing_rolls.add(normalized_roll)
+                model.students.append(
+                    StudentModel(
+                        classroom_id=class_id,
+                        roll_number=student.roll_number,
+                        name=student.name,
+                    )
+                )
+            model.updated_at = datetime.utcnow()
+            session.commit()
+            session.refresh(model)
+            return self._to_domain(model)
+        except IntegrityError as exc:
+            session.rollback()
+            raise ValueError(str(exc)) from exc
+        finally:
+            session.close()
+
+    def _to_domain(self, model: Optional[ClassroomModel]) -> Optional[Classroom]:
+        if not model:
+            return None
+        return Classroom(
+            id=model.id,
+            name=model.name,
+            description=model.description or "",
+            expected_student_count=model.expected_student_count or 0,
+            students=[
+                StudentProfile(
+                    roll_number=student.roll_number,
+                    name=student.name,
+                )
+                for student in sorted(model.students, key=lambda s: s.roll_number)
+            ],
+            created_at=model.created_at or datetime.utcnow(),
+            updated_at=model.updated_at or datetime.utcnow(),
+        )
 
     def create_user(
         self,

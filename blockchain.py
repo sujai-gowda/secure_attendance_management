@@ -155,13 +155,6 @@ def parse_request():
                     result=f"Error: {error_msg}"
                 )
 
-            form_data = [
-                validated_data["teacher_name"],
-                validated_data["date"].strftime("%Y-%m-%d"),
-                validated_data["course"],
-                validated_data["year"]
-            ]
-
             form_dict_with_rolls = {f"roll_no{i+1}": roll for i, roll in enumerate(validated_data["present_students"])}
             form_dict_with_rolls.update({
                 "teacher_name": validated_data["teacher_name"],
@@ -170,8 +163,15 @@ def parse_request():
                 "year": validated_data["year"],
             })
 
+            attendance_payload = {
+                "teacher_name": validated_data["teacher_name"],
+                "date": validated_data["date"].strftime("%Y-%m-%d"),
+                "course": validated_data["course"],
+                "year": validated_data["year"],
+            }
+
             success, result = blockchain_service.add_attendance_block(
-                form_dict_with_rolls, form_data
+                form_dict_with_rolls, attendance_payload
             )
 
             if success and "added" in result.lower():

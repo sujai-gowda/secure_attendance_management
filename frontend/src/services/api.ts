@@ -73,6 +73,8 @@ export interface AttendanceRecord {
   date: string
   course: string
   year: string
+  class_id?: string | null
+  class_name?: string | null
   present_students: string[]
   student_count: number
 }
@@ -119,6 +121,22 @@ export interface StudentSearchResult {
   roll_no: string
   records: StudentRecord[]
   total_records: number
+}
+
+export interface ClassroomStudent {
+  roll_number: string
+  name: string
+}
+
+export interface Classroom {
+  id: string
+  name: string
+  description?: string
+  expected_student_count: number
+  students: ClassroomStudent[]
+  created_at: string
+  updated_at: string
+  current_student_count?: number
 }
 
 export const apiService = {
@@ -245,13 +263,15 @@ export const apiService = {
     course: string
     date: string
     year: string
+    classId: string
     presentStudents: string[]
-  }): Promise<{ success: boolean; message: string; blockIndex?: number; studentsCount?: number }> {
+  }): Promise<{ success: boolean; message: string; blockIndex?: number; studentsCount?: number; classId?: string }> {
     const response = await apiClient.post('/attendance', {
       teacher_name: data.teacherName.trim(),
       course: data.course.trim(),
       date: data.date,
       year: data.year,
+      class_id: data.classId,
       present_students: data.presentStudents.map(rollNo => rollNo.trim()).filter(Boolean),
     })
 
@@ -260,12 +280,51 @@ export const apiService = {
       message: response.data.data.message || 'Attendance recorded successfully on the blockchain!',
       blockIndex: response.data.data.block_index,
       studentsCount: response.data.data.students_count,
+      classId: response.data.data.class_id,
     }
   },
 
   async searchStudent(rollNo: string): Promise<StudentSearchResult> {
     const response = await apiClient.get(`/students/${encodeURIComponent(rollNo.trim())}`)
     return response.data.data || response.data
+  },
+
+  async listClassrooms(): Promise<Classroom[]> {
+    const response = await apiClient.get('/classrooms')
+    return response.data.data || response.data
+  },
+
+  async createClassroom(payload: {
+    name: string
+    expectedStudentCount: number
+    description?: string
+  }): Promise<Classroom> {
+    const response = await apiClient.post('/classrooms', {
+      name: payload.name.trim(),
+      expected_student_count: payload.expectedStudentCount,
+      description: payload.description?.trim() || '',
+    })
+    return response.data.data || response.data
+  },
+
+  async addStudentsToClassroom(classId: string, students: ClassroomStudent[]): Promise<Classroom> {
+    const response = await apiClient.post(`/classrooms/${classId}/students`, {
+      students: students.map(student => ({
+        roll_number: student.roll_number.trim(),
+        name: student.name.trim(),
+      })),
+    })
+    return response.data.data || response.data
+  },
+
+  async getClassroom(classId: string): Promise<Classroom> {
+    const response = await apiClient.get(`/classrooms/${classId}`)
+    return response.data.data || response.data
+  },
+
+  async deleteClassroom(classId: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.delete(`/classrooms/${classId}`)
+    return response.data
   },
 }
 
