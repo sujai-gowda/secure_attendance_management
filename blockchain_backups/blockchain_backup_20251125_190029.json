@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "created": "2025-11-25 19:00:29.769896",
+    "total_blocks": 2,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-11-25 19:00:29.678832",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "merkle_root": null,
+      "hash": "c08ff05efcae15f4fc49e7140e7d0ceed85fbf095ea5700dc674ffdb632d79e4"
+    },
+    {
+      "index": 1,
+      "timestamp": "2025-11-25 19:00:29.769896",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "T",
+        "date": "2024-01-10",
+        "course": "C",
+        "year": "2024",
+        "class_id": "CLS-9669E6AC",
+        "class_name": "Demo Class",
+        "present_students": [
+          "R1"
+        ]
+      },
+      "prev_hash": "c08ff05efcae15f4fc49e7140e7d0ceed85fbf095ea5700dc674ffdb632d79e4",
+      "merkle_root": "f7c213198daa8d6d4492fa6ca5430ad2226255b0c7c41144493f251f0f8694c8",
+      "hash": "9a800852065d6ed71ffcce3719c96eb8e014a2e1821f79aed3f72e810c838c44"
+    }
+  ]
+}

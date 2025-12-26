@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "created": "2025-11-25 18:59:48.568294",
+    "total_blocks": 1,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-11-25 18:59:48.568294",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "merkle_root": null,
+      "hash": "276dfb74ab013266d4b8fb4db13684cde7f23bc059cbbecaac3d34864cd27ce1"
+    }
+  ]
+}

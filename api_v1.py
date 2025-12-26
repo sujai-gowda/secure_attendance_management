@@ -684,6 +684,43 @@ def get_classroom(class_id: str):
         )), 500
 
 
+@api_v1.route('/classrooms/<class_id>', methods=['DELETE'])
+@limiter.limit("10 per minute")
+def delete_classroom(class_id: str):
+    """Delete a classroom"""
+    try:
+        if not class_id or not class_id.strip():
+            return jsonify(create_error_response(
+                "validation_error",
+                "Classroom ID is required",
+                400
+            )), 400
+        
+        classroom_service: ClassroomService = g.classroom_service
+        
+        success = classroom_service.delete_classroom(class_id.strip())
+        
+        if not success:
+            return jsonify(create_error_response(
+                "not_found",
+                f"Classroom {class_id} not found",
+                404
+            )), 404
+        
+        return jsonify(create_success_response(
+            {"id": class_id},
+            "Classroom deleted successfully"
+        )), 200
+        
+    except Exception as e:
+        logger.error(f"Error in delete_classroom: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to delete classroom",
+            500
+        )), 500
+
+
 @api_v1.route('/classrooms/<class_id>/students', methods=['POST'])
 @limiter.limit("10 per minute")
 def add_students_to_classroom(class_id: str):
