@@ -313,6 +313,19 @@ class DatabaseClassroomRepository:
         finally:
             session.close()
 
+    def delete_classroom(self, class_id: str) -> bool:
+        session = self.db.get_session()
+        try:
+            result = session.query(ClassroomModel).filter(ClassroomModel.id == class_id).delete()
+            session.commit()
+            return result > 0
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error deleting classroom: {str(e)}", exc_info=True)
+            return False
+        finally:
+            session.close()
+
     def _to_domain(self, model: Optional[ClassroomModel]) -> Optional[Classroom]:
         if not model:
             return None

@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "created": "2025-12-17 21:46:44.540762",
+    "total_blocks": 2,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-12-16 10:36:33.487430",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "merkle_root": null,
+      "hash": "69580d04e5b7e59f62593ac63db0c12d6b2e75de325117fd304944816abbf8bd"
+    },
+    {
+      "index": 1,
+      "timestamp": "2025-12-17 21:46:44.540762",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "Dr. Smith",
+        "date": "2025-12-17",
+        "course": "Data Structures and Algorithms",
+        "year": "2025",
+        "class_id": "CLS-38386188",
+        "class_name": "Attendance Class",
+        "present_students": [
+          "R002",
+          "R001"
+        ]
+      },
+      "prev_hash": "69580d04e5b7e59f62593ac63db0c12d6b2e75de325117fd304944816abbf8bd",
+      "merkle_root": "013028e529a84ca8030cb30ab7681b6d2c0d785cfe264bc18d6cf485b2cae244",
+      "hash": "e25fd6496471ad0c721af7fdd09d987ef6ccc52d28ed952b19a17929feb5973b"
+    }
+  ]
+}

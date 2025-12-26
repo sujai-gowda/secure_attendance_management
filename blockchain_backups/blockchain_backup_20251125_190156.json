@@ -7,7 +7,7 @@
   "blocks": [
     {
       "index": 0,
-      "timestamp": "2025-12-16 10:36:33.487430",
+      "timestamp": "2025-11-22 19:13:09.547343",
       "data": {
         "type": "genesis",
         "message": "Genesis Block - Blockchain Initialized",
@@ -15,26 +15,27 @@
       },
       "prev_hash": "0",
       "merkle_root": null,
-      "hash": "69580d04e5b7e59f62593ac63db0c12d6b2e75de325117fd304944816abbf8bd"
+      "hash": "42478dbb79c4f4b20c3cb4f18326aebae8c5128b30e3a1029db019eeba315f40"
     },
     {
       "index": 1,
-      "timestamp": "2025-12-17 21:46:44.540762",
+      "timestamp": "2025-11-23 00:47:48.351839",
       "data": {
         "type": "attendance",
-        "teacher_name": "Dr. Smith",
-        "date": "2025-12-17",
-        "course": "Data Structures and Algorithms",
+        "teacher_name": "Dr. Williams",
+        "date": "2025-11-22",
+        "course": "Operating Systems",
         "year": "2025",
-        "class_id": "CLS-38386188",
-        "class_name": "Attendance Class",
         "present_students": [
-          "R002",
-          "R001"
+          "1",
+          "2",
+          "5",
+          "4",
+          "3"
         ]
       },
       "prev_hash": "42478dbb79c4f4b20c3cb4f18326aebae8c5128b30e3a1029db019eeba315f40",
-      "merkle_root": "60606b33dbb1c512d2ce775e7d71731658c2ffa79d9fe26b1bdf253632b1ea06",
+      "merkle_root": "60606b33dbb1c512d226b1bdf253632b1ea06",
       "hash": "d08d1adb43cd97e25174f770c3a4786ae697f4c58127013233da4a3e672c17cf"
     },
     {
@@ -179,7 +180,7 @@
       },
       "prev_hash": "e1494bcc17f17660c959ddbf515daea07588e5a035cbf2f775c8f419bf8beffd",
       "merkle_root": "26b60853afb4e433a8d9eb7f18c09d63e3755b6109806563cab78ba4111c25d7",
-      "hash": "892168392b4f0a0a0f12ca1fd7136ee24ed3272057f518a184299ff7815e51e3"
+      "hash": "892168392b4f0f518a184299ff7815e51e3"
     },
     {
       "index": 9,
@@ -194,11 +195,12 @@
         "class_name": "Test Class",
         "present_students": [
           "001",
-          "002"
+          "002",
+          "003"
         ]
       },
-      "prev_hash": "892168392b4f0a0a0f12ca1fd7136ee24ed3272057f518a184299ff7815e51e3",
-      "merkle_root": "56bb71c97ec3c5b833202e3973613634bf99cfa8cc98ab904451e3e2c22fd4fd",
+      "prev_hash": "892168392b48a184299ff7815e51e3",
+      "merkle_root": "56bb71c97ec3c5b8ab904451e3e2c22fd4fd",
       "hash": "f6f536147ea8e08c59fb5e7db1454b9f36428836ac868ee7229cf88c84314cbf"
     }
   ]
