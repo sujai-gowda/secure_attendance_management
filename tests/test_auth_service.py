@@ -1,5 +1,5 @@
 import pytest
-from auth_service import AuthService, ROLES
+from src.services.auth_service import AuthService, ROLES
 
 
 class TestAuthService:

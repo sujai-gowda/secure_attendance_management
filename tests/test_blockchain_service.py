@@ -1,6 +1,6 @@
 import pytest
-from blockchain_service import BlockchainService
-from block import Block
+from src.services.blockchain_service import BlockchainService
+from src.blockchain.block import Block
 import datetime as dt
 
 

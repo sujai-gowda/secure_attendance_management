@@ -1,17 +1,18 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { Toaster } from '@/components/ui/toaster'
-import { AuthProvider } from '@/contexts/AuthContext'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import Layout from '@/components/layout/Layout'
-import TeacherRoute from '@/components/TeacherRoute'
-import HomePage from '@/pages/HomePage'
-import LoginPage from '@/pages/LoginPage'
-import AttendancePage from '@/pages/AttendancePage'
-import RecordsPage from '@/pages/RecordsPage'
-import AnalyticsPage from '@/pages/AnalyticsPage'
-import IntegrityPage from '@/pages/IntegrityPage'
-import StudentSearchPage from '@/pages/StudentSearchPage'
-import AddClassPage from '@/pages/AddClassPage'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import Layout from "@/components/layout/Layout";
+import TeacherRoute from "@/components/TeacherRoute";
+import HomePage from "@/pages/HomePage";
+import LoginPage from "@/pages/LoginPage";
+import AttendancePage from "@/pages/AttendancePage";
+import RecordsPage from "@/pages/RecordsPage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
+import IntegrityPage from "@/pages/IntegrityPage";
+import StudentSearchPage from "@/pages/StudentSearchPage";
+import AddClassPage from "@/pages/AddClassPage";
+import ClassroomsPage from "@/pages/ClassroomsPage";
 
 function App() {
   return (
@@ -50,6 +51,16 @@ function App() {
                         }
                       />
                       <Route
+                        path="/classrooms"
+                        element={
+                          <TeacherRoute>
+                            <ErrorBoundary>
+                              <ClassroomsPage />
+                            </ErrorBoundary>
+                          </TeacherRoute>
+                        }
+                      />
+                      <Route
                         path="/analytics"
                         element={
                           <TeacherRoute>
@@ -70,8 +81,7 @@ function App() {
         </Router>
       </AuthProvider>
     </ErrorBoundary>
-  )
+  );
 }
 
-export default App
-
+export default App;

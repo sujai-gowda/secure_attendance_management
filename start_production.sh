@@ -21,5 +21,5 @@ PORT=${PORT:-5001}
 
 echo "Starting Gunicorn with $WORKERS workers on port $PORT"
 
-exec gunicorn --config gunicorn_config.py blockchain:app
+exec gunicorn --config gunicorn_config.py src.app:app
 

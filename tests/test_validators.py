@@ -1,5 +1,5 @@
 import pytest
-from validators import (
+from src.utils.validators import (
     validate_attendance_form,
     validate_search_form,
     sanitize_string,

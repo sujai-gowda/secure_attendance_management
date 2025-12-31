@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from classroom_service import ClassroomService, JsonClassroomRepository
-from classroom_models import StudentProfile
+from src.services.classroom_service import ClassroomService, JsonClassroomRepository
+from src.models.classroom_models import StudentProfile
 
 
 def build_repository(tmp_path):
