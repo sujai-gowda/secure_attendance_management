@@ -9,6 +9,7 @@ import { TEACHERS } from "@/constants/attendance";
 const navItems = [
   { path: "/", label: "Home" },
   { path: "/attendance", label: "Take Attendance", requireTeacher: true },
+  { path: "/classrooms", label: "Classrooms", requireTeacher: true },
   { path: "/records", label: "View Records" },
   { path: "/students", label: "Student Search" },
   { path: "/analytics", label: "Analytics", requireTeacher: true },

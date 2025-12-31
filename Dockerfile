@@ -11,12 +11,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV FLASK_APP=blockchain.py
+ENV FLASK_APP=src.app
 ENV PYTHONUNBUFFERED=1
 ENV PORT=5001
 ENV WORKERS=4
 
 EXPOSE 5001
 
-CMD ["gunicorn", "--config", "gunicorn_config.py", "blockchain:app"]
+CMD ["gunicorn", "--config", "gunicorn_config.py", "src.app:app"]
 

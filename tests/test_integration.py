@@ -1,10 +1,10 @@
 import pytest
 from flask import Flask
-import blockchain as blockchain_app
-from blockchain import app
-from blockchain_service import BlockchainService
-from auth_service import auth_service
-from config import Config
+import src.app as blockchain_app
+from src.app import app
+from src.services.blockchain_service import BlockchainService
+from src.services.auth_service import auth_service
+from src.config.config import Config
 
 
 @pytest.fixture
