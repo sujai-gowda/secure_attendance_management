@@ -1,186 +1,141 @@
-# Blockendance - Blockchain Implementation from Scratch
-
-## A Complete Blockchain-based Attendance System Built from the Ground Up
+# Blockendance - Blockchain-Based Attendance Management System
 
 ![Blockchain](https://img.shields.io/badge/Blockchain-From%20Scratch-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.6%2B-green.svg)
+![Python](https://img.shields.io/badge/Python-3.8%2B-green.svg)
+![React](https://img.shields.io/badge/React-18-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-Web%20Framework-red.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-
----
 
 ## 🚀 Project Overview
 
 **Blockendance** is a complete blockchain implementation built from scratch in Python, demonstrating core blockchain concepts through a practical attendance management system. This project showcases how to build a functional blockchain without relying on existing blockchain frameworks.
 
-### 🎯 What Makes This Special
+### 🎯 Key Features
 
-- **Pure Python Implementation**: Every component built from scratch
+- **Pure Python Blockchain**: Every component built from scratch
 - **Complete Blockchain Architecture**: Genesis block, block creation, chain validation
 - **Cryptographic Security**: SHA-256 hashing and block linking
-- **Real-world Application**: Practical attendance management use case
-- **Educational Value**: Perfect for understanding blockchain fundamentals
+- **Modern React Frontend**: TypeScript, Tailwind CSS, shadcn/ui
+- **RESTful API**: Versioned API with authentication and rate limiting
+- **Production Ready**: Docker support, Gunicorn configuration, CI/CD
+- **Security Features**: JWT authentication, bcrypt password hashing
+- **Testing**: Unit tests, integration tests, E2E tests
 
-## 🔗 Blockchain Architecture
-
-### Core Components
-
-#### 1. **Block Structure**
-```python
-class Block:
-    - index: Block position in chain
-    - timestamp: Block creation time
-    - data: Attendance records (JSON)
-    - prev_hash: Previous block's hash
-    - hash: Current block's SHA-256 hash
-```
-
-#### 2. **Genesis Block**
-- First block in the chain (index 0)
-- No previous hash reference
-- Initializes the blockchain
-
-#### 3. **Chain Validation**
-- Cryptographic hash verification
-- Block linkage integrity
-- Tamper detection algorithms
-
-#### 4. **Data Immutability**
-- Once written, data cannot be modified
-- Any tampering breaks the chain
-- Cryptographic proof of integrity
-
-## 🛠️ Implementation Details
-
-### File Structure
-```
-Blockendance/
-├── block.py           # Block class with hashing and validation
-├── genesis.py         # Genesis block creation
-├── newBlock.py        # New block creation and addition
-├── getBlock.py        # Block retrieval and search
-├── checkChain.py      # Blockchain integrity verification
-├── blockchain.py      # Main Flask application
-└── templates/         # Web interface templates
-```
-
-### Key Features
-
-#### 🔐 **Cryptographic Security**
-- **SHA-256 Hashing**: Each block secured with cryptographic hash
-- **Chain Linking**: Blocks linked via previous block hashes
-- **Tamper Detection**: Any modification breaks the chain
-- **Data Integrity**: Immutable record storage
-
-#### 📊 **Blockchain Operations**
-- **Block Creation**: Automated block generation with proper indexing
-- **Chain Validation**: Complete integrity checking algorithms
-- **Data Retrieval**: Efficient search through blockchain
-- **Statistics**: Real-time blockchain analytics
-
-#### 🌐 **Web Interface**
-- **Responsive Design**: Modern Material Design UI
-- **Form Validation**: Client and server-side validation
-- **Real-time Feedback**: Live attendance counting
-- **Error Handling**: Comprehensive error management
-
-## 🚀 Quick Start
+## 📋 Quick Start
 
 ### Prerequisites
-- Python 3.6 or higher
-- pip package manager
 
-### Installation
+- **Python 3.8+** installed
+- **Node.js 18+** and npm/yarn/pnpm installed
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/adeen-s/Blockendance.git
-cd Blockendance
+### Setup
+
+1. **Install Backend Dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Create `.env` file** in project root:
+
+   ```env
+   SECRET_KEY=your-secret-key-here-change-in-production
+   DEBUG=True
+   HOST=0.0.0.0
+   PORT=5001
+   BLOCKCHAIN_FILE=blockchain_data.json
+   BACKUP_DIR=blockchain_backups
+   LOG_LEVEL=INFO
+   ```
+
+3. **Start Backend**
+
+   ```bash
+   python run.py
+   ```
+
+4. **Install Frontend Dependencies** (in a new terminal)
+
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+5. **Start Frontend**
+
+   ```bash
+   npm run dev
+   ```
+
+6. **Access the Application**
+   - Frontend: `http://localhost:3000`
+   - Backend API: `http://localhost:5001`
+   - API Docs: `http://localhost:5001/api/v1/docs`
+
+**Default Login**: `admin` / `admin123` ⚠️ Change in production!
+
+## 🏗️ Architecture
+
+### Backend Structure
+
+```
+src/
+├── app.py                    # Main Flask application
+├── config/                   # Configuration
+├── services/                 # Business logic (blockchain, auth, classroom)
+├── api/v1/                   # API routes, schemas, documentation
+├── blockchain/               # Core blockchain implementation
+├── models/                   # Data models
+└── utils/                    # Utilities (validators, analytics, logging)
 ```
 
-2. **Install dependencies**
-```bash
-pip install Flask
+### Frontend Structure
+
+```
+frontend/src/
+├── components/   # React components
+├── pages/       # Page components
+├── services/    # API services
+└── contexts/    # React contexts
 ```
 
-3. **Run the application**
-```bash
-python blockchain.py
-```
+## 📚 API Documentation
 
-4. **Access the application**
-Open your browser and navigate to `http://localhost:5001`
+- **Interactive Docs**: `http://localhost:5001/api/v1/docs` (Swagger UI)
+- **Base URL**: `http://localhost:5001/api/v1`
 
-## 📖 How It Works
+### Key Endpoints
 
-### 1. **Genesis Block Creation**
-```python
-def create_genesis_block():
-    genesis_data = {
-        "type": "genesis",
-        "message": "Genesis Block - Blockchain Initialized",
-        "creator": "Blockendance System"
-    }
-    return Block(0, datetime.now(), genesis_data, "0")
-```
+- `POST /auth/login` - User authentication
+- `POST /attendance` - Submit attendance record
+- `GET /records` - Get attendance records
+- `GET /analytics` - Attendance analytics
+- `GET /integrity` - Blockchain integrity check
+- `GET /classrooms` - Manage classrooms
 
-### 2. **Adding New Blocks**
-```python
-def next_block(last_block, data):
-    this_index = last_block.index + 1
-    this_timestamp = datetime.now()
-    this_data = copy.deepcopy(data)
-    this_prev_hash = last_block.hash
-    return Block(this_index, this_timestamp, this_data, this_prev_hash)
-```
+All endpoints (except `/auth/login`, `/auth/verify`, `/stats`, `/records`, `/analytics`, `/integrity`) require JWT authentication.
 
-### 3. **Chain Validation**
-```python
-def check_integrity(chain):
-    for i, block in enumerate(chain):
-        if not block.is_valid():
-            return f"Error: Block #{i} has invalid hash"
-        if i > 0 and block.prev_hash != chain[i-1].hash:
-            return f"Error: Block #{i} not properly linked"
-    return "Blockchain integrity verified"
-```
+## 🔒 Security
 
-## 🎓 Educational Value
+- **JWT Authentication** with 24-hour token expiration
+- **Role-Based Access Control** (Admin, Teacher, Student/Viewer)
+- **Bcrypt Password Hashing**
+- **Rate Limiting** on all endpoints
+- **Input Validation** and XSS prevention
+- **CORS Configuration**
 
-This project demonstrates:
+**Important**: Change default credentials and set a strong `SECRET_KEY` (minimum 32 characters) in production!
 
-- **Blockchain Fundamentals**: Core concepts without complexity
-- **Cryptographic Hashing**: SHA-256 implementation
-- **Data Structures**: Linked list of blocks
-- **Web Development**: Flask framework integration
-- **Security Principles**: Immutability and integrity
+## 📖 Additional Documentation
 
-## 🔍 Use Cases
-
-- **Educational**: Learn blockchain development
-- **Proof of Concept**: Demonstrate blockchain applications
-- **Research**: Study blockchain behavior
-- **Development**: Base for larger blockchain projects
-
-## ⚠️ Important Notes
-
-- **Educational Purpose**: This is a simplified blockchain for learning
-- **No Consensus**: Single-node implementation (no mining/proof-of-work)
-- **Centralized**: Runs on single Flask server
-- **No Persistence**: Data lost on restart (can be extended)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **[HOW_TO_RUN.md](HOW_TO_RUN.md)** - Detailed running instructions
+- **[ROADMAP.md](ROADMAP.md)** - Development roadmap
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ## 👨‍💻 Author
 
-**Adeen Shukla** - *Initial work* - [GitHub](https://github.com/adeen-s)
+**Sujai** & **Prathamesh**
 
 ---
 
-*Built with ❤️ to demonstrate blockchain technology from scratch*
+_Built with ❤️ to demonstrate blockchain technology from scratch_

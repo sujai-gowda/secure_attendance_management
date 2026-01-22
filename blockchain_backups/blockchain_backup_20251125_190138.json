@@ -1,13 +1,13 @@
 {
   "metadata": {
-    "created": "2025-12-31 22:51:17.775379",
+    "created": "2025-11-25 19:01:38.958543",
     "total_blocks": 1,
     "version": "1.0"
   },
   "blocks": [
     {
       "index": 0,
-      "timestamp": "2025-12-31 22:51:17.775153",
+      "timestamp": "2025-11-25 19:01:38.958543",
       "data": {
         "type": "genesis",
         "message": "Genesis Block - Blockchain Initialized",
@@ -15,7 +15,7 @@
       },
       "prev_hash": "0",
       "merkle_root": null,
-      "hash": "4820e3ac1a7b1039683a276087176e21e8688ab94d79c823a41ada45795ab3d8"
+      "hash": "326e98613ad695f819b42c0e2edebf03eaf2b4f3b606673fbc227cf030e133bf"
     }
   ]
 }

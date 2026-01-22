@@ -5,12 +5,12 @@ Demonstrates core blockchain operations without the web interface
 """
 
 import datetime as dt
-from block import Block
-from genesis import create_blockchain
-from newBlock import next_block, add_block
-from checkChain import check_integrity, get_blockchain_stats
-from persistence import save_blockchain, load_blockchain, export_blockchain_csv
-from analytics import get_attendance_analytics, generate_attendance_report
+from src.blockchain.block import Block
+from src.blockchain.genesis import create_blockchain
+from src.blockchain.newBlock import next_block
+from src.blockchain.checkChain import check_integrity, get_blockchain_stats
+from src.blockchain.persistence import save_blockchain, load_blockchain, export_blockchain_csv
+from src.utils.analytics import get_attendance_analytics, generate_attendance_report
 
 def test_blockchain_creation():
     """Test blockchain initialization"""

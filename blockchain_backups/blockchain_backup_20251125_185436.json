@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "created": "2025-11-25 18:54:36.071073",
+    "total_blocks": 4,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-11-22 19:13:09.547343",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "merkle_root": null,
+      "hash": "42478dbb79c4f4b20c3cb4f18326aebae8c5128b30e3a1029db019eeba315f40"
+    },
+    {
+      "index": 1,
+      "timestamp": "2025-11-23 00:47:48.351839",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "Dr. Williams",
+        "date": "2025-11-22",
+        "course": "Operating Systems",
+        "year": "2025",
+        "present_students": [
+          "1",
+          "2",
+          "5",
+          "4"
+        ]
+      },
+      "prev_hash": "42478dbb79c4f4b20c3cb4f18326aebae8c5128b30e3a1029db019eeba315f40",
+      "merkle_root": "60606b33dbb1c512d2ce775e7d71731658c2ffa79d9fe26b1bdf253632b1ea06",
+      "hash": "d08d1adb43cd97e25174f770c3a4786ae697f4c58127013233da4a3e672c17cf"
+    },
+    {
+      "index": 2,
+      "timestamp": "2025-11-25 18:54:36.052742",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "Test Teacher",
+        "date": "2024-01-01",
+        "course": "Test Course",
+        "year": "2024",
+        "class_id": "CLS-TEST",
+        "class_name": "Test Class",
+        "present_students": [
+          "001",
+          "002",
+          "003"
+        ]
+      },
+      "prev_hash": "d08d1adb43cd97e25174f770c3a4786ae697f4c58127013233da4a3e672c17cf",
+      "merkle_root": "2b8c4609194f48edee7b49b4698c3f1ba5b62cfc8143913fb74738b63c76f651",
+      "hash": "9220c7c2870dfaa924c40f7c485cdd27d430b900f0ec240267916b315bff60bb"
+    },
+    {
+      "index": 3,
+      "timestamp": "2025-11-25 18:54:36.071073",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "Test Teacher",
+        "date": "2024-01-01",
+        "course": "Test Course",
+        "year": "2024",
+        "class_id": "CLS-TEST",
+        "class_name": "Test Class",
+        "present_students": [
+          "001",
+          "002"
+        ]
+      },
+      "prev_hash": "9220c7c2870dfaa924c40f7c485cdd27d430b900f0ec240267916b315bff60bb",
+      "merkle_root": "d0606ca6cff6b53c1cb2fd4832e9bd08c7112f390b40f3d0e74606f24b1f9add",
+      "hash": "0ec40e6708c8086f8bb53564ba1fcab1f1fc2224c7b3ec592222a3a1a997df54"
+    }
+  ]
+}
