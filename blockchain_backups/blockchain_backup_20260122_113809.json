@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "created": "2026-01-22 11:38:09.920082",
+    "total_blocks": 2,
+    "version": "1.0"
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": "2025-12-31 22:51:17.775153",
+      "data": {
+        "type": "genesis",
+        "message": "Genesis Block - Blockchain Initialized",
+        "creator": "Blockendance System"
+      },
+      "prev_hash": "0",
+      "merkle_root": null,
+      "hash": "4820e3ac1a7b1039683a276087176e21e8688ab94d79c823a41ada45795ab3d8"
+    },
+    {
+      "index": 1,
+      "timestamp": "2026-01-22 11:38:09.919864",
+      "data": {
+        "type": "attendance",
+        "teacher_name": "Prof. Miller",
+        "date": "2026-01-10",
+        "course": "Operating Systems",
+        "year": "2025",
+        "class_id": null,
+        "class_name": null,
+        "present_students": [
+          "2024009",
+          "2025005",
+          "2024050",
+          "2024003",
+          "2024015",
+          "2025032",
+          "2024041",
+          "2024021",
+          "2024040",
+          "2025006",
+          "2024004",
+          "2025033",
+          "2024035",
+          "2025016",
+          "2025018",
+          "2025031",
+          "2025035",
+          "2024001",
+          "2024046"
+        ]
+      },
+      "prev_hash": "4820e3ac1a7b1039683a276087176e21e8688ab94d79c823a41ada45795ab3d8",
+      "merkle_root": "b61b119dec875d571760d5984dc8d8dfbdd02faeacbaf35bef775aa950193e2f",
+      "hash": "46b2b4a2ff4f58bac601921a1bda236806c26c2323d0c0b8d753f128032c3ee6"
+    }
+  ]
+}
