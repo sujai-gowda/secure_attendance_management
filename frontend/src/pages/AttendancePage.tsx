@@ -255,15 +255,15 @@ export default function AttendancePage() {
   const rosterCount = selectedClass?.students.length ?? 0;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold">Take Attendance</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Take Attendance</h1>
         <p className="text-muted-foreground mt-2">
           Record student attendance on the blockchain
         </p>
       </div>
 
-      <Card>
+      <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle>Step {step} of 2</CardTitle>
           <CardDescription>
@@ -334,7 +334,7 @@ export default function AttendancePage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full gradient-primary hover:opacity-90 transition-opacity">
                 Next
               </Button>
             </form>
@@ -455,7 +455,7 @@ export default function AttendancePage() {
                 >
                   Back
                 </Button>
-                <Button type="submit" disabled={loading} className="flex-1">
+                <Button type="submit" disabled={loading} className="flex-1 gradient-primary hover:opacity-90 transition-opacity">
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Attendance
                 </Button>

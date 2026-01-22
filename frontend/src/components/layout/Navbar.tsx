@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { TEACHERS } from "@/constants/attendance";
 
 const navItems = [
@@ -34,12 +35,12 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 border-b glass-card">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
             <GraduationCap className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Blockendance</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Blockendance</span>
           </Link>
 
           <div className="hidden md:flex md:items-center md:space-x-6">
@@ -50,16 +51,20 @@ export default function Navbar() {
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
+                    "text-sm font-medium transition-all hover:text-primary relative group",
                     location.pathname === item.path
                       ? "text-primary"
                       : "text-muted-foreground"
                   )}
                 >
                   {item.label}
+                  {location.pathname === item.path && (
+                    <span className="absolute -bottom-[21px] left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-purple-600" />
+                  )}
                 </Link>
               );
             })}
+            <ThemeToggle />
             {isAuthenticated && user ? (
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-sm">

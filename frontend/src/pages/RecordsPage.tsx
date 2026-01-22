@@ -101,15 +101,15 @@ export default function RecordsPage() {
   const absentCount = results?.filter(s => s.status === 'absent').length || 0
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold">View Records</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">View Records</h1>
         <p className="text-muted-foreground mt-2">
           Search for attendance records in the blockchain
         </p>
       </div>
 
-      <Card>
+      <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle>Search Records</CardTitle>
           <CardDescription>
@@ -176,7 +176,7 @@ export default function RecordsPage() {
                 ))}
               </Select>
             </div>
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading} className="w-full gradient-primary hover:opacity-90 transition-opacity">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Search className="mr-2 h-4 w-4" />
               Search Records
@@ -186,7 +186,7 @@ export default function RecordsPage() {
       </Card>
 
       {results !== null && (
-        <Card>
+        <Card className="glass-card border-white/10">
           <CardHeader>
             <CardTitle>Search Results</CardTitle>
             <CardDescription>

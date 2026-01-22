@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Layout from "@/components/layout/Layout";
 import TeacherRoute from "@/components/TeacherRoute";
@@ -17,8 +18,9 @@ import ClassroomsPage from "@/pages/ClassroomsPage";
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route
@@ -80,7 +82,8 @@ function App() {
           <Toaster />
         </Router>
       </AuthProvider>
-    </ErrorBoundary>
+    </ThemeProvider>
+  </ErrorBoundary>
   );
 }
 
