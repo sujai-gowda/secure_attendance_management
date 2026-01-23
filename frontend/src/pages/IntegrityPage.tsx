@@ -316,7 +316,7 @@ export default function IntegrityPage() {
                         className={`border rounded-lg transition-all ${
                           isGenesis
                             ? "border-primary/50 bg-primary/5"
-                            : "border-border bg-card hover:bg-accent/30"
+                            : "border-border bg-card"
                         }`}
                       >
                         <div

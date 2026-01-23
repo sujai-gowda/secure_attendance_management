@@ -242,9 +242,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                 />
                 <Legend />
@@ -300,9 +309,18 @@ export default function AnalyticsPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
+                      backgroundColor: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "6px",
+                      color: "hsl(var(--popover-foreground))",
+                      padding: "8px 12px",
+                    }}
+                    itemStyle={{
+                      color: "hsl(var(--popover-foreground))",
+                    }}
+                    labelStyle={{
+                      color: "hsl(var(--popover-foreground))",
+                      fontWeight: 600,
                     }}
                     formatter={(value: number) => [
                       `${value} students`,
@@ -359,9 +377,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                   formatter={(value: number) => [
                     `${value} attendances`,
@@ -434,9 +461,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                 />
                 <Legend />
