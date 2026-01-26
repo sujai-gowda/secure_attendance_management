@@ -384,6 +384,26 @@ def check_integrity():
         )), 500
 
 
+@api_v1.route('/blocks', methods=['GET'])
+@limiter.limit("30 per minute")
+def get_all_blocks():
+    try:
+        blockchain_service: BlockchainService = g.blockchain_service
+        blockchain = blockchain_service.get_blockchain()
+        
+        blocks_data = [block.to_dict() for block in blockchain]
+        
+        return jsonify(create_success_response(blocks_data)), 200
+        
+    except Exception as e:
+        logger.error(f"Error in get_all_blocks: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to retrieve blocks",
+            500
+        )), 500
+
+
 @api_v1.route('/students/<roll_no>', methods=['GET'])
 @limiter.limit("30 per minute")
 def search_student(roll_no: str):

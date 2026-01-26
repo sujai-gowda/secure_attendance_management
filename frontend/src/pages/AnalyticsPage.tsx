@@ -146,16 +146,16 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold">Analytics</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Analytics</h1>
         <p className="text-muted-foreground mt-2">
           Insights and statistics from attendance data
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="glass-card hover-lift border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Blocks</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +170,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-lift border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Students
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-lift border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Unique Teachers
@@ -200,7 +200,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-lift border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Unique Courses
@@ -216,7 +216,7 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="glass-card hover-lift border-white/10">
         <CardHeader>
           <CardTitle>Daily Attendance Trend</CardTitle>
           <CardDescription>
@@ -242,9 +242,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                 />
                 <Legend />
@@ -267,7 +276,7 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card hover-lift border-white/10">
         <CardHeader>
           <CardTitle>Course Distribution</CardTitle>
           <CardDescription>
@@ -300,9 +309,18 @@ export default function AnalyticsPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
+                      backgroundColor: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "6px",
+                      color: "hsl(var(--popover-foreground))",
+                      padding: "8px 12px",
+                    }}
+                    itemStyle={{
+                      color: "hsl(var(--popover-foreground))",
+                    }}
+                    labelStyle={{
+                      color: "hsl(var(--popover-foreground))",
+                      fontWeight: 600,
                     }}
                     formatter={(value: number) => [
                       `${value} students`,
@@ -327,7 +345,7 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card hover-lift border-white/10">
         <CardHeader>
           <CardTitle>Top Students by Attendance</CardTitle>
           <CardDescription>
@@ -359,9 +377,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                   formatter={(value: number) => [
                     `${value} attendances`,
@@ -385,7 +412,7 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card hover-lift border-white/10">
         <CardHeader>
           <CardTitle>Teacher Performance: Attendance vs Classes</CardTitle>
           <CardDescription>
@@ -434,9 +461,18 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
+                    color: "hsl(var(--popover-foreground))",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--popover-foreground))",
+                    fontWeight: 600,
                   }}
                 />
                 <Legend />
@@ -466,7 +502,7 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card hover-lift border-white/10">
         <CardHeader>
           <CardTitle>Attendance Calendar Heatmap</CardTitle>
           <CardDescription>

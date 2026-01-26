@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
@@ -64,18 +65,67 @@ class BlockchainService:
                 if not self._blockchain:
                     loaded_blockchain, load_message = load_blockchain(Config.BLOCKCHAIN_FILE)
                     if loaded_blockchain:
-                        self._blockchain = loaded_blockchain
-                        logger.info(f"Loaded existing blockchain: {load_message}")
-                    else:
-                        self._blockchain = create_blockchain()
-                        logger.info(f"Created new blockchain: {load_message}")
-                        save_success, save_msg = save_blockchain(
-                            self._blockchain, Config.BLOCKCHAIN_FILE
-                        )
-                        if save_success:
-                            logger.info(f"Saved new blockchain: {save_msg}")
+                        if len(loaded_blockchain) == 1:
+                            logger.warning(f"Current blockchain only has genesis block. Attempting to restore from backup...")
+                            restored = self._try_restore_from_backup()
+                            if restored:
+                                self._blockchain = restored
+                                logger.info(f"Successfully restored blockchain from backup: {len(restored)} blocks")
+                            else:
+                                self._blockchain = loaded_blockchain
+                                logger.warning(f"Could not restore from backup. Using current blockchain with only genesis block.")
                         else:
-                            logger.warning(f"Failed to save new blockchain: {save_msg}")
+                            self._blockchain = loaded_blockchain
+                            logger.info(f"Loaded existing blockchain: {load_message}")
+                    else:
+                        logger.warning(f"Failed to load blockchain: {load_message}. Attempting to restore from backup...")
+                        restored = self._try_restore_from_backup()
+                        if restored:
+                            self._blockchain = restored
+                            logger.info(f"Successfully restored blockchain from backup: {len(restored)} blocks")
+                        else:
+                            self._blockchain = create_blockchain()
+                            logger.warning(f"Could not restore from backup. Creating new blockchain: {load_message}")
+                            save_success, save_msg = save_blockchain(
+                                self._blockchain, Config.BLOCKCHAIN_FILE
+                            )
+                            if save_success:
+                                logger.info(f"Saved new blockchain: {save_msg}")
+                            else:
+                                logger.warning(f"Failed to save new blockchain: {save_msg}")
+    
+    def _try_restore_from_backup(self) -> Optional[List[Block]]:
+        """Try to restore blockchain from the most recent backup"""
+        try:
+            from src.config.config import Config
+            backups = get_blockchain_backups()
+            if not backups:
+                logger.warning("No backup files found")
+                return None
+            
+            backups.sort(key=lambda x: x['created'], reverse=True)
+            
+            for backup in backups:
+                backup_filename = backup['filename']
+                backup_path = os.path.join(Config.BACKUP_DIR, backup_filename)
+                logger.info(f"Attempting to restore from backup: {backup_filename}")
+                
+                loaded_blockchain, message = load_blockchain(backup_path)
+                if loaded_blockchain and len(loaded_blockchain) > 1:
+                    logger.info(f"Found valid backup with {len(loaded_blockchain)} blocks: {backup_filename}")
+                    save_success, save_msg = save_blockchain(loaded_blockchain, Config.BLOCKCHAIN_FILE)
+                    if save_success:
+                        logger.info(f"Successfully restored and saved blockchain from {backup_filename}")
+                        return loaded_blockchain
+                    else:
+                        logger.warning(f"Failed to save restored blockchain: {save_msg}")
+                else:
+                    logger.warning(f"Backup {backup_filename} is invalid or only has genesis: {message}")
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error attempting to restore from backup: {str(e)}", exc_info=True)
+            return None
 
     @property
     def blockchain(self) -> List[Block]:
