@@ -1,57 +1,62 @@
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useToast } from '@/hooks/use-toast'
-import { Loader2, Search, User, Calendar, BookOpen, GraduationCap } from 'lucide-react'
-import { apiService, type StudentSearchResult } from '@/services/api'
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { Loader2, Search, User, Calendar, BookOpen, GraduationCap, FileSearch } from "lucide-react";
+import { useStudentSearch } from "@/queries";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getErrorMessage } from "@/helpers/error-messages";
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 export default function StudentSearchPage() {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [rollNo, setRollNo] = useState('')
-  const [result, setResult] = useState<StudentSearchResult | null>(null)
+  const { toast } = useToast();
+  const [rollNo, setRollNo] = useState("");
+  const debouncedRollNo = useDebouncedValue(rollNo.trim(), SEARCH_DEBOUNCE_MS);
+  const { data: result, isLoading: loading, isError, error, refetch } = useStudentSearch(debouncedRollNo);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!rollNo.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a roll number',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setLoading(true)
-    try {
-      const data = await apiService.searchStudent(rollNo.trim())
-      setResult(data)
-      
-      if (data.total_records === 0) {
+  useEffect(() => {
+    if (
+      result &&
+      debouncedRollNo &&
+      result.roll_no.toLowerCase() === debouncedRollNo.toLowerCase()
+    ) {
+      if (result.total_records === 0) {
         toast({
-          title: 'No Results',
-          description: `No attendance records found for roll number ${rollNo.trim()}`,
-        })
+          title: "No Results",
+          description: `No attendance records found for roll number ${debouncedRollNo}`,
+        });
       } else {
         toast({
-          title: 'Success',
-          description: `Found ${data.total_records} attendance record(s) for ${rollNo.trim()}`,
-        })
+          title: "Success",
+          description: `Found ${result.total_records} attendance record(s) for ${debouncedRollNo}`,
+        });
       }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to search student records. Please try again.',
-        variant: 'destructive',
-      })
-      setResult(null)
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [result?.roll_no, result?.total_records, debouncedRollNo, toast]);
+
+  useEffect(() => {
+    if (isError && error) {
+      const { title, description } = getErrorMessage(error, "search");
+      toast({ title, description, variant: "destructive" });
+    }
+  }, [isError, error, toast]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rollNo.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a roll number",
+        variant: "destructive",
+      });
+      return;
+    }
+    refetch();
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -66,7 +71,7 @@ export default function StudentSearchPage() {
         <CardHeader>
           <CardTitle>Search by Roll Number</CardTitle>
           <CardDescription>
-            Enter a student roll number to view all their attendance records
+            Enter a roll number — results update after you pause typing, or click Search for immediate results.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,9 +155,12 @@ export default function StudentSearchPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No attendance records found for this roll number
-              </p>
+              <EmptyState
+                icon={FileSearch}
+                title="No records for this roll number"
+                description="No attendance entries found. Check the roll number or try another student."
+                variant="compact"
+              />
             )}
           </CardContent>
         </Card>

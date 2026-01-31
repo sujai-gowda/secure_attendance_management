@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { ClassroomsTableSkeleton } from "@/components/ui/page-skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -19,43 +20,30 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiService, Classroom } from "@/services/api";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getErrorMessage } from "@/helpers/error-messages";
+import { useClassrooms, useDeleteClassroom } from "@/queries";
+import { FolderPlus } from "lucide-react";
 
 export default function ClassroomsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loadingClasses, setLoadingClasses] = useState(false);
+  const { data: classrooms = [], isLoading: loadingClasses, isError, error } = useClassrooms();
+  const deleteClassroom = useDeleteClassroom();
 
   const [classToDelete, setClassToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isError && error) {
+      const { title, description } = getErrorMessage(error, "classroom");
+      toast({ title, description, variant: "destructive" });
+    }
+  }, [isError, error, toast]);
 
   const toggleExpand = (id: string) => {
     setExpandedClassId((prev) => (prev === id ? null : id));
   };
-
-  const fetchClassrooms = useCallback(async () => {
-    setLoadingClasses(true);
-    try {
-      const data = await apiService.listClassrooms();
-      setClassrooms(data);
-    } catch (error: any) {
-      toast({
-        title: "Failed to load classes",
-        description: error?.message || "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingClasses(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchClassrooms();
-  }, [fetchClassrooms]);
 
   const handleDeleteClick = (classId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -64,33 +52,24 @@ export default function ClassroomsPage() {
 
   const confirmDelete = async () => {
     if (!classToDelete) return;
-
-    setIsDeleting(true);
     try {
-      await apiService.deleteClassroom(classToDelete);
+      await deleteClassroom.mutateAsync(classToDelete);
       toast({
         title: "Class deleted",
         description: "The classroom has been successfully deleted.",
       });
-      fetchClassrooms();
       setClassToDelete(null);
-    } catch (error: any) {
-      toast({
-        title: "Error deleting class",
-        description: error?.message || "Failed to delete class",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
+    } catch (err: unknown) {
+      const { title, description } = getErrorMessage(err, "classroom");
+      toast({ title, description, variant: "destructive" });
     }
   };
 
   const sortedClassrooms = useMemo(() => {
-    return [...classrooms].sort((a, b) => {
-      return (
+    return [...classrooms].sort(
+      (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-    });
+    );
   }, [classrooms]);
 
   return (
@@ -105,10 +84,21 @@ export default function ClassroomsPage() {
         <Button onClick={() => navigate("/add-class")}>Create Class</Button>
       </div>
 
-      {sortedClassrooms.length === 0 && !loadingClasses ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-          No classrooms yet. Create one to see it appear here.
-        </div>
+      {loadingClasses ? (
+        <ClassroomsTableSkeleton rows={5} />
+      ) : sortedClassrooms.length === 0 ? (
+        <EmptyState
+          icon={FolderPlus}
+          title="No classrooms yet"
+          description="Create your first classroom to add student rosters and start recording attendance."
+          action={
+            <Button onClick={() => navigate("/add-class")}>
+              Create class
+            </Button>
+          }
+          variant="compact"
+          className="rounded-lg border border-dashed"
+        />
       ) : (
         <div className="rounded-md border">
           <Table>
@@ -182,9 +172,12 @@ export default function ClassroomsPage() {
                               </div>
                             ))}
                             {classroom.students.length === 0 && (
-                              <p className="text-sm text-muted-foreground">
-                                No students in this class.
-                              </p>
+                              <EmptyState
+                                title="No students in this class"
+                                description="Add students from the class edit flow or create a new class with a roster."
+                                variant="inline"
+                                className="text-left"
+                              />
                             )}
                           </div>
                         </div>
@@ -216,16 +209,16 @@ export default function ClassroomsPage() {
             <Button
               variant="outline"
               onClick={() => setClassToDelete(null)}
-              disabled={isDeleting}
+              disabled={deleteClassroom.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={isDeleting}
+              disabled={deleteClassroom.isPending}
             >
-              {isDeleting ? (
+              {deleteClassroom.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Delete

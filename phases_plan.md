@@ -40,3 +40,9 @@
 - Document the new APIs and frontend flows in `ROADMAP.md` or a dedicated section.
 - Update `CHANGELOG.md` with the feature summary once merged.
 - Coordinate deployment steps (migrations, config toggles) before release.
+
+---
+
+## Deferred / Follow-up
+
+- **Download / Excel export**: Revisit download functionality later. Add a script that creates an Excel sheet using existing external libraries; keep it efficient. See `IMPROVEMENTS_AND_FEATURES.md` → “Deferred / Follow-up” for details.

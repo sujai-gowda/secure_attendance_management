@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2,
   Shield,
   CheckCircle2,
   XCircle,
@@ -23,14 +22,12 @@ import {
   Users,
   BookOpen,
 } from "lucide-react";
-import { apiService, type BlockchainStats } from "@/services/api";
+import { IntegrityCardSkeleton } from "@/components/ui/page-skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getErrorMessage } from "@/helpers/error-messages";
+import { Layers } from "lucide-react";
+import { useStats, useIntegrity, useBlocks } from "@/queries";
 import { MerkleTreeVisualization } from "@/components/blockchain/MerkleTreeVisualization";
-
-interface IntegrityResult {
-  result: string;
-  is_valid: boolean;
-  timestamp: string;
-}
 
 interface Block {
   index: number;
@@ -43,62 +40,70 @@ interface Block {
 
 export default function IntegrityPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [integrityResult, setIntegrityResult] =
-    useState<IntegrityResult | null>(null);
-  const [stats, setStats] = useState<BlockchainStats | null>(null);
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const statsQuery = useStats();
+  const integrityQuery = useIntegrity();
+  const blocksQuery = useBlocks();
+
   const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set());
   const [showMerkleTree, setShowMerkleTree] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const loading =
+    statsQuery.isLoading || integrityQuery.isLoading || blocksQuery.isLoading;
+  const integrityResult = integrityQuery.data ?? null;
+  const stats = statsQuery.data ?? null;
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [integrityData, statsData, blocksData] = await Promise.all([
-        apiService.checkIntegrity(),
-        apiService.getStats(),
-        apiService.getAllBlocks().catch((err) => {
-          console.error("Failed to load blocks:", err);
-          return [];
-        }),
-      ]);
-
-      setIntegrityResult(integrityData);
-      setStats(statsData);
-
-      if (blocksData && Array.isArray(blocksData) && blocksData.length > 0) {
-        setBlocks(blocksData);
-      } else if (statsData) {
-        const allBlocks: Block[] = [];
-        if (statsData.genesis_block) {
-          allBlocks.push(statsData.genesis_block);
-        }
-        if (statsData.latest_block && statsData.latest_block.index !== 0) {
-          allBlocks.push(statsData.latest_block);
-        }
-        setBlocks(allBlocks);
-        if (allBlocks.length < (statsData.total_blocks || 0)) {
-          toast({
-            title: "Warning",
-            description: `Only showing ${allBlocks.length} of ${statsData.total_blocks} blocks. API may not be returning all blocks.`,
-            variant: "default",
-          });
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to check integrity",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  const blocks = useMemo(() => {
+    const blocksData = blocksQuery.data;
+    if (blocksData && Array.isArray(blocksData) && blocksData.length > 0) {
+      return blocksData;
     }
-  };
+    if (stats) {
+      const allBlocks: Block[] = [];
+      if (stats.genesis_block) allBlocks.push(stats.genesis_block);
+      if (
+        stats.latest_block &&
+        (stats.latest_block as Block).index !== 0
+      ) {
+        allBlocks.push(stats.latest_block as Block);
+      }
+      return allBlocks;
+    }
+    return [];
+  }, [blocksQuery.data, stats]);
+
+  useEffect(() => {
+    if (statsQuery.isError && statsQuery.error) {
+      const { title, description } = getErrorMessage(statsQuery.error, "integrity");
+      toast({ title, description, variant: "destructive" });
+    }
+    if (integrityQuery.isError && integrityQuery.error) {
+      const { title, description } = getErrorMessage(integrityQuery.error, "integrity");
+      toast({ title, description, variant: "destructive" });
+    }
+  }, [
+    statsQuery.isError,
+    statsQuery.error,
+    integrityQuery.isError,
+    integrityQuery.error,
+    toast,
+  ]);
+
+  const hasShownBlocksWarning = useRef(false);
+  useEffect(() => {
+    if (
+      stats &&
+      blocks.length > 0 &&
+      blocks.length < (stats.total_blocks || 0) &&
+      !hasShownBlocksWarning.current
+    ) {
+      hasShownBlocksWarning.current = true;
+      toast({
+        title: "Warning",
+        description: `Only showing ${blocks.length} of ${stats.total_blocks} blocks. API may not be returning all blocks.`,
+        variant: "default",
+      });
+    }
+  }, [stats, blocks.length, toast]);
 
   const toggleBlock = (index: number) => {
     setExpandedBlocks((prev) => {
@@ -159,9 +164,7 @@ export default function IntegrityPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
+            <IntegrityCardSkeleton />
           ) : integrityResult ? (
             <>
               <div
@@ -277,7 +280,12 @@ export default function IntegrityPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No blocks available</p>
+                <EmptyState
+                  icon={Layers}
+                  title="No blocks in the chain yet"
+                  description="Submit attendance to create the first block after genesis. Block details will appear here."
+                  variant="compact"
+                />
               )}
             </CardContent>
           </Card>

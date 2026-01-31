@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { getErrorMessage } from '@/helpers/error-messages'
 import { apiService, ClassroomStudent } from '@/services/api'
 
 const MAX_STUDENTS = 50
@@ -127,10 +128,11 @@ export default function AddClassPage() {
       })
 
       navigate('/') // Navigate back to home after creation
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const { title, description } = getErrorMessage(error, 'addClass')
       toast({
-        title: 'Failed to create class',
-        description: error?.message || 'Please try again.',
+        title,
+        description,
         variant: 'destructive',
       })
     } finally {

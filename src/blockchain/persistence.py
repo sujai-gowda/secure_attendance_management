@@ -93,48 +93,64 @@ def load_blockchain(filename: Optional[str] = None) -> Tuple[Optional[List[Block
     except Exception as e:
         return None, f"Error loading blockchain: {str(e)}"
 
+def get_blockchain_csv_content(blockchain: List[Block]) -> str:
+    import csv
+    import io
+    out = io.StringIO()
+    fieldnames = ['block_index', 'timestamp', 'type', 'teacher_name', 'course',
+                  'year', 'date', 'students_present', 'prev_hash', 'hash']
+    writer = csv.DictWriter(out, fieldnames=fieldnames)
+    writer.writeheader()
+    for block in blockchain:
+        if block.data.get('type') == 'genesis':
+            writer.writerow({
+                'block_index': block.index,
+                'timestamp': block.timestamp,
+                'type': 'genesis',
+                'teacher_name': '',
+                'course': '',
+                'year': '',
+                'date': '',
+                'students_present': '',
+                'prev_hash': block.prev_hash,
+                'hash': block.hash
+            })
+        elif block.data.get('type') == 'attendance':
+            writer.writerow({
+                'block_index': block.index,
+                'timestamp': block.timestamp,
+                'type': 'attendance',
+                'teacher_name': block.data.get('teacher_name', ''),
+                'course': block.data.get('course', ''),
+                'year': block.data.get('year', ''),
+                'date': block.data.get('date', ''),
+                'students_present': ';'.join(block.data.get('present_students', [])),
+                'prev_hash': block.prev_hash,
+                'hash': block.hash
+            })
+    return out.getvalue()
+
+
+def get_blockchain_json_content(blockchain: List[Block]) -> str:
+    blockchain_data = {
+        "metadata": {
+            "created": str(dt.datetime.now()),
+            "total_blocks": len(blockchain),
+            "version": "1.0"
+        },
+        "blocks": [block.to_dict() for block in blockchain]
+    }
+    return json.dumps(blockchain_data, indent=2, default=str)
+
+
 def export_blockchain_csv(
     blockchain: List[Block], filename: str = "blockchain_export.csv"
 ) -> Tuple[bool, str]:
     try:
-        import csv
-        
-        with open(filename, 'w', newline='') as csvfile:
-            fieldnames = ['block_index', 'timestamp', 'type', 'teacher_name', 'course', 
-                         'year', 'date', 'students_present', 'prev_hash', 'hash']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for block in blockchain:
-                if block.data.get('type') == 'genesis':
-                    writer.writerow({
-                        'block_index': block.index,
-                        'timestamp': block.timestamp,
-                        'type': 'genesis',
-                        'teacher_name': '',
-                        'course': '',
-                        'year': '',
-                        'date': '',
-                        'students_present': '',
-                        'prev_hash': block.prev_hash,
-                        'hash': block.hash
-                    })
-                elif block.data.get('type') == 'attendance':
-                    writer.writerow({
-                        'block_index': block.index,
-                        'timestamp': block.timestamp,
-                        'type': 'attendance',
-                        'teacher_name': block.data.get('teacher_name', ''),
-                        'course': block.data.get('course', ''),
-                        'year': block.data.get('year', ''),
-                        'date': block.data.get('date', ''),
-                        'students_present': ';'.join(block.data.get('present_students', [])),
-                        'prev_hash': block.prev_hash,
-                        'hash': block.hash
-                    })
-        
+        content = get_blockchain_csv_content(blockchain)
+        with open(filename, 'w', newline='', encoding='utf-8') as f:
+            f.write(content)
         return True, f"Blockchain exported to {filename}"
-    
     except Exception as e:
         return False, f"Error exporting blockchain: {str(e)}"
 

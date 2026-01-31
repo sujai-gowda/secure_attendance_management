@@ -8,6 +8,8 @@ from sqlalchemy import (
     JSON,
     ForeignKey,
     UniqueConstraint,
+    Index,
+    text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
@@ -34,6 +36,29 @@ class BlockModel(Base):
     merkle_root = Column(String(64), nullable=True, index=True)
     hash = Column(String(64), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index(
+            'idx_blocks_data_teacher',
+            text("json_extract(data, '$.teacher_name')"),
+        ),
+        Index(
+            'idx_blocks_data_date',
+            text("json_extract(data, '$.date')"),
+        ),
+        Index(
+            'idx_blocks_data_course',
+            text("json_extract(data, '$.course')"),
+        ),
+        Index(
+            'idx_blocks_data_year',
+            text("json_extract(data, '$.year')"),
+        ),
+        Index(
+            'idx_blocks_data_type',
+            text("json_extract(data, '$.type')"),
+        ),
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -96,7 +121,7 @@ class StudentModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     classroom_id = Column(String(64), ForeignKey('classrooms.id', ondelete='CASCADE'), nullable=False, index=True)
-    roll_number = Column(String(100), nullable=False)
+    roll_number = Column(String(100), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -137,13 +162,29 @@ class DatabaseService:
         )
         
         Base.metadata.create_all(self.engine)
+        self._ensure_indexes()
         logger.info(f"Database initialized: {database_url}")
 
     def get_session(self) -> Session:
         return self.SessionLocal()
 
+    def _ensure_indexes(self):
+        for table in Base.metadata.sorted_tables:
+            for idx in table.indexes:
+                if not idx.name:
+                    continue
+                try:
+                    idx.create(self.engine, checkfirst=True)
+                except Exception as e:
+                    logger.debug(
+                        "Index %s create skipped (may exist or unsupported): %s",
+                        idx.name,
+                        e,
+                    )
+
     def create_tables(self):
         Base.metadata.create_all(self.engine)
+        self._ensure_indexes()
         logger.info("Database tables created")
 
     def drop_tables(self):

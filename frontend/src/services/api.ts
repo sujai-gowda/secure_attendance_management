@@ -1,158 +1,202 @@
-import axios from 'axios'
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1'
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: 10000,
-})
+});
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return config
+    return config;
   },
   (error) => {
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
+
+let refreshPromise: Promise<string> | null = null;
 
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config;
+    const isRefreshRequest =
+      originalRequest?.url?.includes("/auth/refresh") ?? false;
 
     if (error.response) {
-      if (error.response.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true
+      if (
+        error.response.status === 401 &&
+        !originalRequest._retry &&
+        !isRefreshRequest
+      ) {
+        originalRequest._retry = true;
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
 
         try {
-          const token = localStorage.getItem('token')
-          if (token) {
-            const response = await apiClient.post('/auth/refresh')
-            const newToken = response.data.data.token
-            localStorage.setItem('token', newToken)
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
-            return apiClient(originalRequest)
+          if (!refreshPromise) {
+            refreshPromise = apiClient
+              .post("/auth/refresh")
+              .then((res) => {
+                const newToken = res.data.data.token;
+                localStorage.setItem("token", newToken);
+                return newToken;
+              })
+              .finally(() => {
+                refreshPromise = null;
+              });
           }
-        } catch (refreshError) {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
-          return Promise.reject(refreshError)
+
+          const newToken = await refreshPromise;
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient(originalRequest);
+        } catch (refreshError: unknown) {
+          const status = (refreshError as { response?: { status?: number } })
+            ?.response?.status;
+          if (status === 429) {
+            return Promise.reject({
+              message:
+                "Too many requests. Please wait a moment and try again.",
+              status: 429,
+            });
+          }
+          if (status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+            return Promise.reject(refreshError);
+          }
+          return Promise.reject({
+            message:
+              (refreshError as { message?: string })?.message ||
+              "Session could not be renewed. Please try again or log in again.",
+            status: status ?? 0,
+          });
         }
       }
 
-      if (error.response.status === 401) {
-        localStorage.removeItem('token')
-        window.location.href = '/login'
+      if (error.response.status === 401 && !isRefreshRequest) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
       }
 
       return Promise.reject({
-        message: error.response.data?.error || 'An error occurred',
+        message:
+          error.response.data?.error ||
+          error.response.data?.message ||
+          "An error occurred",
         status: error.response.status,
-      })
+      });
     }
 
     return Promise.reject({
-      message: 'Network error. Please check your connection.',
+      message: "Network error. Please check your connection.",
       status: 0,
-    })
+    });
   }
-)
+);
 
 export interface AttendanceRecord {
-  block_index: number
-  timestamp: string
-  teacher_name: string
-  date: string
-  course: string
-  year: string
-  class_id?: string | null
-  class_name?: string | null
-  present_students: string[]
-  student_count: number
+  block_index: number;
+  timestamp: string;
+  teacher_name: string;
+  date: string;
+  course: string;
+  year: string;
+  class_id?: string | null;
+  class_name?: string | null;
+  present_students: string[];
+  student_count: number;
 }
 
 export interface BlockchainStats {
-  total_blocks: number
-  genesis_block: any
-  latest_block: any
-  attendance_blocks: number
-  total_attendance_records: number
+  total_blocks: number;
+  genesis_block: any;
+  latest_block: any;
+  attendance_blocks: number;
+  total_attendance_records: number;
 }
 
 export interface AttendanceAnalytics {
   overview: {
-    total_blocks: number
-    attendance_blocks: number
-    total_students_recorded: number
-    unique_teachers: string[]
-    unique_courses: string[]
+    total_blocks: number;
+    attendance_blocks: number;
+    total_students_recorded: number;
+    unique_teachers: string[];
+    unique_courses: string[];
     date_range: {
-      start: string | null
-      end: string | null
-    }
-  }
-  by_teacher: Record<string, any>
-  by_course: Record<string, any>
-  by_date: Record<string, any>
-  student_attendance: Record<string, number>
+      start: string | null;
+      end: string | null;
+    };
+  };
+  by_teacher: Record<string, any>;
+  by_course: Record<string, any>;
+  by_date: Record<string, any>;
+  student_attendance: Record<string, number>;
   trends: {
-    daily_attendance: [string, number][]
-    course_popularity: [string, number][]
-    teacher_activity: [string, number][]
-  }
+    daily_attendance: [string, number][];
+    course_popularity: [string, number][];
+    teacher_activity: [string, number][];
+  };
 }
 
 export interface StudentRecord {
-  date: string
-  course: string
-  year: string
-  teacher_name: string
+  date: string;
+  course: string;
+  year: string;
+  teacher_name: string;
 }
 
 export interface StudentSearchResult {
-  roll_no: string
-  records: StudentRecord[]
-  total_records: number
+  roll_no: string;
+  records: StudentRecord[];
+  total_records: number;
 }
 
 export interface ClassroomStudent {
-  roll_number: string
-  name: string
+  roll_number: string;
+  name: string;
 }
 
 export interface Classroom {
-  id: string
-  name: string
-  description?: string
-  expected_student_count: number
-  students: ClassroomStudent[]
-  created_at: string
-  updated_at: string
-  current_student_count?: number
+  id: string;
+  name: string;
+  description?: string;
+  expected_student_count: number;
+  students: ClassroomStudent[];
+  created_at: string;
+  updated_at: string;
+  current_student_count?: number;
 }
 
 export const apiService = {
   async getStats(): Promise<BlockchainStats> {
-    const response = await apiClient.get('/stats')
-    return response.data.data || response.data
+    const response = await apiClient.get("/stats");
+    return response.data.data || response.data;
   },
 
   async getRecords(
-    page: number = 1, 
+    page: number = 1,
     perPage: number = 10,
     filters?: {
-      teacherName?: string
-      course?: string
-      date?: string
-      year?: string
+      teacherName?: string;
+      course?: string;
+      date?: string;
+      year?: string;
     }
   ): Promise<{
     data: AttendanceRecord[];
@@ -165,168 +209,220 @@ export const apiService = {
       has_prev: boolean;
     };
   }> {
-    const params: any = { page, per_page: perPage }
+    const params: any = { page, per_page: perPage };
     if (filters) {
-      if (filters.teacherName) params.teacher_name = filters.teacherName
-      if (filters.course) params.course = filters.course
-      if (filters.date) params.date = filters.date
-      if (filters.year) params.year = filters.year
+      if (filters.teacherName) params.teacher_name = filters.teacherName;
+      if (filters.course) params.course = filters.course;
+      if (filters.date) params.date = filters.date;
+      if (filters.year) params.year = filters.year;
     }
-    const response = await apiClient.get('/records', { params })
-    return response.data.data || response.data
+    const response = await apiClient.get("/records", { params });
+    return response.data.data || response.data;
   },
 
   async getAnalytics(): Promise<AttendanceAnalytics> {
-    const response = await apiClient.get('/analytics')
-    return response.data.data || response.data
+    const response = await apiClient.get("/analytics");
+    return response.data.data || response.data;
   },
 
-  async getReport(format: 'text' | 'json' = 'json'): Promise<string> {
-    const response = await apiClient.get('/report', {
+  async getReport(format: "text" | "json" = "json"): Promise<string> {
+    const response = await apiClient.get("/report", {
       params: { format },
-      responseType: format === 'text' ? 'text' : 'json',
-    })
-    return response.data
+      responseType: format === "text" ? "text" : "json",
+    });
+    return response.data;
   },
 
-  async exportData(format: 'csv' | 'analytics' | 'json'): Promise<{ success: boolean; message: string }> {
-    const response = await apiClient.get(`/export/${format}`)
-    return response.data
+  async exportData(
+    format: "csv" | "analytics" | "json"
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.get(`/export/${format}`);
+    return response.data;
   },
 
-  async checkIntegrity(): Promise<{ result: string; is_valid: boolean; timestamp: string }> {
-    const response = await apiClient.get('/integrity')
-    return response.data.data || response.data
+  async exportDownload(
+    format: "csv" | "analytics" | "json"
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiClient.get(`/export/${format}/download`, {
+      responseType: "blob",
+    });
+    const blob = response.data as Blob;
+    const disposition = response.headers["content-disposition"];
+    const filenameMatch =
+      disposition && /filename="?([^";]+)"?/.exec(disposition);
+    const filename =
+      filenameMatch?.[1]?.trim() ||
+      (format === "csv"
+        ? "blockchain_export.csv"
+        : format === "analytics"
+          ? "blockchain_analytics.json"
+          : "blockchain_export.json");
+    return { blob, filename };
+  },
+
+  async checkIntegrity(): Promise<{
+    result: string;
+    is_valid: boolean;
+    timestamp: string;
+  }> {
+    const response = await apiClient.get("/integrity");
+    return response.data.data || response.data;
   },
 
   async getAllBlocks(): Promise<any[]> {
-    const response = await apiClient.get('/blocks')
-    return response.data.data || response.data || []
+    const response = await apiClient.get("/blocks");
+    return response.data.data || response.data || [];
   },
 
-  async login(username: string, password: string): Promise<{ token: string; user: any }> {
+  async login(
+    username: string,
+    password: string
+  ): Promise<{ token: string; user: any }> {
     const TEACHER_CREDENTIALS = [
-      { username: 'teacher1', password: 'teacher123', role: 'teacher' },
-      { username: 'teacher2', password: 'teacher123', role: 'teacher' },
-      { username: 'teacher3', password: 'teacher123', role: 'teacher' },
-    ]
+      { username: "teacher1", password: "teacher123", role: "teacher" },
+      { username: "teacher2", password: "teacher123", role: "teacher" },
+      { username: "teacher3", password: "teacher123", role: "teacher" },
+    ];
 
     const teacher = TEACHER_CREDENTIALS.find(
       (cred) => cred.username === username && cred.password === password
-    )
+    );
 
     if (teacher) {
-      const mockToken = `mock_token_${teacher.username}_${Date.now()}`
+      const mockToken = `mock_token_${teacher.username}_${Date.now()}`;
       return {
         token: mockToken,
         user: {
           username: teacher.username,
           role: teacher.role,
         },
-      }
+      };
     }
 
     try {
-      const response = await apiClient.post('/auth/login', { username, password })
-      return response.data.data
+      const response = await apiClient.post("/auth/login", {
+        username,
+        password,
+      });
+      return response.data.data;
     } catch (error: any) {
-      throw new Error(error.message || 'Invalid username or password')
+      throw new Error(error.message || "Invalid username or password");
     }
   },
 
   async verifyToken(): Promise<any> {
-    const token = localStorage.getItem('token')
-    
-    if (token && token.startsWith('mock_token_')) {
-      const username = token.split('_')[2]
+    const token = localStorage.getItem("token");
+
+    if (token && token.startsWith("mock_token_")) {
+      const username = token.split("_")[2];
       return {
         username,
-        role: 'teacher',
-      }
+        role: "teacher",
+      };
     }
 
     try {
-      const response = await apiClient.get('/auth/verify')
-      return response.data.data
+      const response = await apiClient.get("/auth/verify");
+      return response.data.data;
     } catch (error) {
-      throw error
+      throw error;
     }
   },
 
-  async refreshToken(): Promise<{ token: string; user: any; expires_in: number }> {
-    const response = await apiClient.post('/auth/refresh')
-    return response.data.data
+  async refreshToken(): Promise<{
+    token: string;
+    user: any;
+    expires_in: number;
+  }> {
+    const response = await apiClient.post("/auth/refresh");
+    return response.data.data;
   },
 
   async submitAttendance(data: {
-    teacherName: string
-    course: string
-    date: string
-    year: string
-    classId: string
-    presentStudents: string[]
-  }): Promise<{ success: boolean; message: string; blockIndex?: number; studentsCount?: number; classId?: string }> {
-    const response = await apiClient.post('/attendance', {
+    teacherName: string;
+    course: string;
+    date: string;
+    year: string;
+    classId: string;
+    presentStudents: string[];
+  }): Promise<{
+    success: boolean;
+    message: string;
+    blockIndex?: number;
+    studentsCount?: number;
+    classId?: string;
+  }> {
+    const response = await apiClient.post("/attendance", {
       teacher_name: data.teacherName.trim(),
       course: data.course.trim(),
       date: data.date,
       year: data.year,
       class_id: data.classId,
-      present_students: data.presentStudents.map(rollNo => rollNo.trim()).filter(Boolean),
-    })
+      present_students: data.presentStudents
+        .map((rollNo) => rollNo.trim())
+        .filter(Boolean),
+    });
 
     return {
       success: true,
-      message: response.data.data.message || 'Attendance recorded successfully on the blockchain!',
+      message:
+        response.data.data.message ||
+        "Attendance recorded successfully on the blockchain!",
       blockIndex: response.data.data.block_index,
       studentsCount: response.data.data.students_count,
       classId: response.data.data.class_id,
-    }
+    };
   },
 
   async searchStudent(rollNo: string): Promise<StudentSearchResult> {
-    const response = await apiClient.get(`/students/${encodeURIComponent(rollNo.trim())}`)
-    return response.data.data || response.data
+    const response = await apiClient.get(
+      `/students/${encodeURIComponent(rollNo.trim())}`
+    );
+    return response.data.data || response.data;
   },
 
   async listClassrooms(): Promise<Classroom[]> {
-    const response = await apiClient.get('/classrooms')
-    return response.data.data || response.data
+    const response = await apiClient.get("/classrooms");
+    return response.data.data || response.data;
   },
 
   async createClassroom(payload: {
-    name: string
-    expectedStudentCount: number
-    description?: string
+    name: string;
+    expectedStudentCount: number;
+    description?: string;
   }): Promise<Classroom> {
-    const response = await apiClient.post('/classrooms', {
+    const response = await apiClient.post("/classrooms", {
       name: payload.name.trim(),
       expected_student_count: payload.expectedStudentCount,
-      description: payload.description?.trim() || '',
-    })
-    return response.data.data || response.data
+      description: payload.description?.trim() || "",
+    });
+    return response.data.data || response.data;
   },
 
-  async addStudentsToClassroom(classId: string, students: ClassroomStudent[]): Promise<Classroom> {
+  async addStudentsToClassroom(
+    classId: string,
+    students: ClassroomStudent[]
+  ): Promise<Classroom> {
     const response = await apiClient.post(`/classrooms/${classId}/students`, {
-      students: students.map(student => ({
+      students: students.map((student) => ({
         roll_number: student.roll_number.trim(),
         name: student.name.trim(),
       })),
-    })
-    return response.data.data || response.data
+    });
+    return response.data.data || response.data;
   },
 
   async getClassroom(classId: string): Promise<Classroom> {
-    const response = await apiClient.get(`/classrooms/${classId}`)
-    return response.data.data || response.data
+    const response = await apiClient.get(`/classrooms/${classId}`);
+    return response.data.data || response.data;
   },
 
-  async deleteClassroom(classId: string): Promise<{ success: boolean; message: string }> {
-    const response = await apiClient.delete(`/classrooms/${classId}`)
-    return response.data
+  async deleteClassroom(
+    classId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.delete(`/classrooms/${classId}`);
+    return response.data;
   },
-}
+};
 
-export default apiClient
-
+export default apiClient;

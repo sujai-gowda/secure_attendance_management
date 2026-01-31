@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, g, current_app
+from flask import Blueprint, request, jsonify, g, current_app, Response
 from typing import Dict, Any, Optional
 import logging
 from functools import wraps
@@ -140,7 +140,7 @@ def verify():
 
 
 @api_v1.route('/auth/refresh', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("60 per minute")
 def refresh_token():
     try:
         auth_header = request.headers.get("Authorization")
@@ -351,6 +351,41 @@ def export_data(format: str):
         )), 400
     except Exception as e:
         logger.error(f"Error in export_data: {str(e)}", exc_info=True)
+        return jsonify(create_error_response(
+            "internal_error",
+            "Failed to export data",
+            500
+        )), 500
+
+
+@api_v1.route('/export/<format_type>/download', methods=['GET'])
+@limiter.limit("10 per minute")
+@auth_service.require_auth("read")
+def export_download(format_type: str):
+    try:
+        if format_type not in ("csv", "analytics", "json"):
+            return jsonify(create_error_response(
+                "validation_error",
+                "Invalid export format. Use csv, analytics, or json.",
+                400
+            )), 400
+        blockchain_service: BlockchainService = g.blockchain_service
+        success, content, mimetype, filename = blockchain_service.get_export_content(
+            format_type
+        )
+        if not success or content is None:
+            return jsonify(create_error_response(
+                "export_failed",
+                "Failed to generate export",
+                400
+            )), 400
+        response = Response(content, mimetype=mimetype)
+        response.headers["Content-Disposition"] = (
+            f'attachment; filename="{filename}"'
+        )
+        return response
+    except Exception as e:
+        logger.error(f"Error in export_download: {str(e)}", exc_info=True)
         return jsonify(create_error_response(
             "internal_error",
             "Failed to export data",

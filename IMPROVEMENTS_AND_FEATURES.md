@@ -25,6 +25,12 @@
 
 ---
 
+## 📌 Deferred / Follow-up (don’t forget)
+
+- **Download / export functionality** – Revisit later. Plan: add a script that generates an **Excel sheet** using existing external libraries (e.g. openpyxl/xlsxwriter on backend or a small CLI), keep it efficient and aligned with current export (CSV/analytics). Then wire frontend download to this or to the same flow.
+
+---
+
 ## 🔧 Areas for Improvement
 
 ### 1. **Code Quality & Architecture**
@@ -47,12 +53,29 @@
 
 ### 2. **Performance Optimizations**
 
+#### How DB indexing helps
+
+Indexes speed up **reads** by letting the database find rows without scanning the whole table.
+
+- **Blocks (attendance records)**  
+  Attendance is stored in `blocks.data` (JSON). We index JSON keys used in filters:
+  - `teacher_name`, `date`, `course`, `year`, `type`  
+  Queries like “records by teacher” or “records on this date” use these keys. Without indexes, the DB scans every block and inspects JSON; with expression indexes (e.g. `json_extract(data, '$.teacher_name')`), it can jump to matching rows and **search_attendance_records** / **get_attendance_blocks** stay fast as data grows.
+
+- **Students**  
+  We index **roll_number** (and already had **classroom_id**). Lookups by roll (e.g. “is this roll in this class?”, uniqueness checks, future “find student by roll” features) avoid full table scans on the students table.
+
+- **Existing indexes**  
+  Blocks already had indexes on `index`, `timestamp`, `prev_hash`, `hash`; users on `username`, `role`; classrooms on `name`. We kept those and added the hot JSON keys and **roll_number**.
+
+Indexes are created at DB init and ensured on startup via `_ensure_indexes()` so new and existing DBs get them. Block JSON indexes use SQLite’s `json_extract()`; for **PostgreSQL**, use expression indexes on `(data->>'teacher_name')`, `(data->>'date')`, etc. **Trade-off:** writes (insert/update) are slightly slower because indexes must be updated; for this app, read-heavy usage (records, analytics, search) benefits more than the cost.
+
 #### High Priority
 
 - [ ] **Add Redis caching** for frequently accessed data (analytics, stats)
-- [ ] **Database indexing** on frequently queried fields (roll_number, date, teacher_name)
+- [x] **Database indexing** on frequently queried fields (roll_number, date, teacher_name) — see “How DB indexing helps” below
 - [ ] **API response compression** (gzip)
-- [ ] **Frontend code splitting** and lazy loading routes
+- [x] **Frontend code splitting** and lazy loading routes (React.lazy + Suspense; page chunks load on first visit)
 - [ ] **Image optimization** if any images are added
 
 #### Medium Priority
