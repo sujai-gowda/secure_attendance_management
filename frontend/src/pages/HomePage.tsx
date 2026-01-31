@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { GraduationCap, FileCheck, BarChart3, Shield } from "lucide-react";
+import { GraduationCap, FileCheck, BarChart3, Shield, LogIn } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const features = [
   {
@@ -65,11 +66,16 @@ export default function HomePage() {
       </div>
 
       {visibleFeatures.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Please log in to access the available features.
-          </p>
-        </div>
+        <EmptyState
+          icon={LogIn}
+          title="Log in to get started"
+          description="Sign in to see attendance, records, analytics, and integrity tools based on your role."
+          action={
+            <Button asChild>
+              <Link to="/login">Go to login</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {visibleFeatures.map((feature, index) => {

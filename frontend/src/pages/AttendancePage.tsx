@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Card,
@@ -12,10 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, FolderPlus, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RosterListSkeleton } from "@/components/ui/page-skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getErrorMessage } from "@/helpers/error-messages";
+import { Link } from "react-router-dom";
 import { TEACHERS, COURSES } from "@/constants/attendance";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiService, Classroom } from "@/services/api";
+import { useClassrooms, useClassroom, useSubmitAttendance } from "@/queries";
 
 interface AttendanceFormData {
   teacherId: string;
@@ -29,20 +34,13 @@ export default function AttendancePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const location = useLocation();
   const preselectedState = location.state as
     | { classId?: string; className?: string }
     | undefined;
   const preselectedClassId = preselectedState?.classId;
   const preselectedClassName = preselectedState?.className;
-  const [classes, setClasses] = useState<Classroom[]>([]);
-  const [classesLoading, setClassesLoading] = useState(false);
-  const [activeClassroom, setActiveClassroom] = useState<Classroom | null>(
-    null
-  );
-  const [activeClassLoading, setActiveClassLoading] = useState(false);
-  const [activeClassError, setActiveClassError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<AttendanceFormData>({
     teacherId: "",
     courseId: "",
@@ -50,6 +48,18 @@ export default function AttendancePage() {
     classId: "",
     presentStudents: new Set(),
   });
+
+  const classroomsQuery = useClassrooms();
+  const classes = classroomsQuery.data ?? [];
+  const classesLoading = classroomsQuery.isLoading;
+  const selectedClassId = formData.classId || preselectedClassId || "";
+  const classroomQuery = useClassroom(selectedClassId || null);
+  const activeClassroom = classroomQuery.data ?? null;
+  const activeClassLoading = classroomQuery.isLoading;
+  const activeClassError = classroomQuery.isError
+    ? getErrorMessage(classroomQuery.error, "classroom").description
+    : null;
+  const submitAttendance = useSubmitAttendance();
 
   useEffect(() => {
     if (user?.username) {
@@ -62,6 +72,39 @@ export default function AttendancePage() {
     }
   }, [user?.username]);
 
+  useEffect(() => {
+    if (preselectedClassId && preselectedClassId !== formData.classId) {
+      setFormData((prev) => ({
+        ...prev,
+        classId: preselectedClassId,
+        presentStudents: new Set(),
+      }));
+    }
+  }, [preselectedClassId, formData.classId]);
+
+  useEffect(() => {
+    if (classroomsQuery.isError && classroomsQuery.error) {
+      const { title, description } = getErrorMessage(
+        classroomsQuery.error,
+        "classroom"
+      );
+      toast({ title, description, variant: "destructive" });
+    }
+    if (classroomQuery.isError && classroomQuery.error) {
+      const { title, description } = getErrorMessage(
+        classroomQuery.error,
+        "classroom"
+      );
+      toast({ title, description, variant: "destructive" });
+    }
+  }, [
+    classroomsQuery.isError,
+    classroomsQuery.error,
+    classroomQuery.isError,
+    classroomQuery.error,
+    toast,
+  ]);
+
   const selectedClass = useMemo(() => {
     if (activeClassroom && activeClassroom.id === formData.classId) {
       return activeClassroom;
@@ -70,67 +113,6 @@ export default function AttendancePage() {
   }, [activeClassroom, classes, formData.classId]);
   const selectedTeacher = TEACHERS.find((t) => t.id === formData.teacherId);
   const selectedCourse = COURSES.find((c) => c.id === formData.courseId);
-
-  const fetchClasses = async () => {
-    setClassesLoading(true);
-    try {
-      const data = await apiService.listClassrooms();
-      setClasses(data);
-    } catch (error) {
-      toast({
-        title: "Failed to load classes",
-        description: "Please refresh the page or try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setClassesLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchClasses();
-  }, []);
-
-  const loadClassroomRoster = useCallback(
-    async (classId: string) => {
-      if (!classId) {
-        setActiveClassroom(null);
-        setActiveClassError(null);
-        return;
-      }
-
-      setActiveClassLoading(true);
-      setActiveClassError(null);
-      try {
-        const classroom = await apiService.getClassroom(classId);
-        setActiveClassroom(classroom);
-      } catch (error: any) {
-        setActiveClassroom(null);
-        const description =
-          error?.message || "Please select another class or try again.";
-        setActiveClassError(description);
-        toast({
-          title: "Unable to load roster",
-          description,
-          variant: "destructive",
-        });
-      } finally {
-        setActiveClassLoading(false);
-      }
-    },
-    [toast]
-  );
-
-  useEffect(() => {
-    if (preselectedClassId && preselectedClassId !== formData.classId) {
-      setFormData((prev) => ({
-        ...prev,
-        classId: preselectedClassId,
-        presentStudents: new Set(),
-      }));
-      loadClassroomRoster(preselectedClassId);
-    }
-  }, [preselectedClassId, formData.classId, loadClassroomRoster]);
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +157,6 @@ export default function AttendancePage() {
       return;
     }
 
-    setLoading(true);
     try {
       if (!selectedClass || !selectedTeacher || !selectedCourse) {
         throw new Error("Missing required selections");
@@ -190,7 +171,7 @@ export default function AttendancePage() {
         throw new Error("No students selected");
       }
 
-      const result = await apiService.submitAttendance({
+      const result = await submitAttendance.mutateAsync({
         teacherName: selectedTeacher.name,
         course: selectedCourse.name,
         date: formData.date,
@@ -212,19 +193,18 @@ export default function AttendancePage() {
         classId: "",
         presentStudents: new Set(),
       });
-      setActiveClassroom(null);
-      setActiveClassError(null);
       setStep(1);
-    } catch (error) {
+    } catch (error: unknown) {
+      const { title, description } = getErrorMessage(error, "attendance");
       toast({
-        title: "Error",
-        description: "Failed to submit attendance. Please try again.",
+        title,
+        description,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
+
+  const loading = submitAttendance.isPending;
 
   const toggleStudent = (rollNo: string) => {
     setFormData((prev) => {
@@ -238,17 +218,27 @@ export default function AttendancePage() {
     });
   };
 
-  const handleClassChange = useCallback(
-    (classId: string) => {
-      setFormData((prev) => ({
-        ...prev,
-        classId,
-        presentStudents: new Set(),
-      }));
-      loadClassroomRoster(classId);
-    },
-    [loadClassroomRoster]
-  );
+  const markAllPresent = () => {
+    if (!selectedClass) return;
+    setFormData((prev) => ({
+      ...prev,
+      presentStudents: new Set(
+        selectedClass.students.map((s) => s.roll_number)
+      ),
+    }));
+  };
+
+  const markAllAbsent = () => {
+    setFormData((prev) => ({ ...prev, presentStudents: new Set() }));
+  };
+
+  const handleClassChange = (classId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      classId,
+      presentStudents: new Set(),
+    }));
+  };
 
   const activeClassName =
     selectedClass?.name || preselectedClassName || "Selected class";
@@ -358,15 +348,24 @@ export default function AttendancePage() {
                   ))}
                 </Select>
                 {classesLoading && (
-                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading classes...
-                  </p>
+                  <div className="mt-2 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
                 )}
                 {!classesLoading && classes.length === 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    No classes available yet. Create one from the home page.
-                  </p>
+                  <EmptyState
+                    icon={FolderPlus}
+                    title="No classes available"
+                    description="Create a classroom from the Classrooms page, then come back here to take attendance."
+                    action={
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/classrooms">Go to Classrooms</Link>
+                      </Button>
+                    }
+                    variant="compact"
+                    className="mt-2 text-left items-start"
+                  />
                 )}
                 {formData.classId && (
                   <div className="mt-4 rounded-md border border-dashed p-4 bg-muted/30">
@@ -391,15 +390,37 @@ export default function AttendancePage() {
               </div>
 
               {activeClassLoading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground border rounded-md p-4">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Fetching the latest roster for this class...
+                <div>
+                  <Label>Mark Students Present</Label>
+                  <div className="mt-2 space-y-2 max-h-96 overflow-y-auto border rounded-md p-4">
+                    <RosterListSkeleton rows={8} />
+                  </div>
                 </div>
               )}
 
               {!activeClassLoading && selectedClass && (
                 <div>
-                  <Label>Mark Students Present</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <Label>Mark Students Present</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={markAllPresent}
+                      >
+                        Mark all present
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={markAllAbsent}
+                      >
+                        Mark all absent
+                      </Button>
+                    </div>
+                  </div>
                   <div className="mt-2 space-y-2 max-h-96 overflow-y-auto border rounded-md p-4">
                     {selectedClass.students.map((student) => (
                       <div
@@ -440,10 +461,18 @@ export default function AttendancePage() {
                 formData.classId &&
                 !selectedClass &&
                 !activeClassError && (
-                  <p className="text-sm text-muted-foreground">
-                    No roster found for this class yet. Add students from the
-                    home page to start tracking attendance.
-                  </p>
+                  <EmptyState
+                    icon={Users}
+                    title="No roster for this class"
+                    description="Add students to this classroom from the Classrooms page, then return to mark attendance."
+                    action={
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/classrooms">Manage Classrooms</Link>
+                      </Button>
+                    }
+                    variant="compact"
+                    className="text-left items-start"
+                  />
                 )}
 
               <div className="flex gap-2">

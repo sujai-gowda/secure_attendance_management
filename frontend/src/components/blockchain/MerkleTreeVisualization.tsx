@@ -15,6 +15,7 @@ import ReactFlow, {
 } from "reactflow"
 import "reactflow/dist/style.css"
 import { ChevronDown, ChevronUp, Info, ArrowUp } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface MerkleTreeVisualizationProps {
   students: string[]
@@ -367,9 +368,11 @@ const MerkleTreeVisualizationInner = ({
 
   if (!hasData) {
     return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        No Merkle tree (Genesis block or no students)
-      </div>
+      <EmptyState
+        title="No Merkle tree to show"
+        description="This block is the genesis block or has no student list. Merkle trees are built from attendance blocks with present students."
+        variant="inline"
+      />
     )
   }
 

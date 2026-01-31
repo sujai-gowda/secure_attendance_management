@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { getErrorMessage } from '@/helpers/error-messages'
 import { Loader2, LogIn } from 'lucide-react'
 
 export default function LoginPage() {
@@ -29,10 +30,11 @@ export default function LoginPage() {
         description: 'Logged in successfully',
       })
       navigate('/')
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const { title, description } = getErrorMessage(error, 'login')
       toast({
-        title: 'Login Failed',
-        description: error.message || 'Invalid username or password',
+        title,
+        description,
         variant: 'destructive',
       })
     } finally {

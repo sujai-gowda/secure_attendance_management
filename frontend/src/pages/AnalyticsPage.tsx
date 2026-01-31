@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -7,8 +7,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, BookOpen } from "lucide-react";
-import { apiService, type AttendanceAnalytics } from "@/services/api";
+import { Users, BookOpen, BarChart3 } from "lucide-react";
+import { AnalyticsPageSkeleton } from "@/components/ui/page-skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ExportButtons } from "@/components/ExportButtons";
+import { getErrorMessage } from "@/helpers/error-messages";
+import { useAnalytics } from "@/queries";
 import {
   BarChart,
   Bar,
@@ -26,132 +30,143 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+const PIE_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#f59e0b",
+  "#10b981",
+  "#06b6d4",
+  "#ef4444",
+  "#6366f1",
+];
+
 export default function AnalyticsPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<AttendanceAnalytics | null>(null);
+  const { data: analytics, isLoading: loading, isError, error } = useAnalytics();
 
   useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
-    setLoading(true);
-    try {
-      const data = await apiService.getAnalytics();
-      setAnalytics(data);
-    } catch (error: any) {
+    if (isError && error) {
+      const { title, description } = getErrorMessage(error, "analytics");
       toast({
-        title: "Error",
-        description: error.message || "Failed to load analytics",
+        title,
+        description,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [isError, error, toast]);
+
+  const dailyAttendanceData = useMemo(() => {
+    if (!analytics) return [];
+    const trends = analytics.trends || {
+      daily_attendance: [],
+      course_popularity: [],
+      teacher_activity: [],
+    };
+    return (trends.daily_attendance || []).map(
+      ([date, students]: [string, number]) => ({
+        date: new Date(date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        fullDate: date,
+        students,
+      })
+    );
+  }, [analytics]);
+
+  const courseDistributionData = useMemo(() => {
+    if (!analytics) return [];
+    return Object.entries(analytics.by_course || {}).map(
+      ([course, data]: [string, any]) => ({
+        name: course,
+        value: data.total_students || 0,
+        classes: data.total_classes || 0,
+      })
+    );
+  }, [analytics]);
+
+  const topStudentsData = useMemo(() => {
+    if (!analytics) return [];
+    return Object.entries(analytics.student_attendance || {})
+      .map(([rollNo, count]) => ({
+        rollNo,
+        count: count as number,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((item) => ({
+        name: `Roll No: ${item.rollNo}`,
+        attendance: item.count,
+      }));
+  }, [analytics]);
+
+  const teacherAttendanceVsClasses = useMemo(() => {
+    if (!analytics) return [];
+    return Object.entries(analytics.by_teacher || {})
+      .map(([teacher, data]: [string, any]) => ({
+        name: teacher,
+        students: data.total_students || 0,
+        classes: data.total_classes || 0,
+        avgStudents: data.avg_students_per_class || 0,
+      }))
+      .sort((a, b) => b.classes - a.classes);
+  }, [analytics]);
+
+  const { attendanceByDate, maxAttendance } = useMemo(() => {
+    if (!analytics) {
+      return { attendanceByDate: [] as { date: string; students: number; classes: number; formattedDate: string }[], maxAttendance: 1 };
+    }
+    const byDate = Object.entries(analytics.by_date || {})
+      .map(([date, data]: [string, any]) => ({
+        date,
+        students: data.students || 0,
+        classes: data.classes || 0,
+        formattedDate: new Date(date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const max = Math.max(...byDate.map((d) => d.students), 1);
+    return { attendanceByDate: byDate, maxAttendance: max };
+  }, [analytics]);
+
+  const getHeatmapIntensity = useCallback(
+    (students: number) => {
+      if (students === 0) return 0;
+      const intensity = Math.ceil((students / maxAttendance) * 4);
+      return Math.min(intensity, 4);
+    },
+    [maxAttendance]
+  );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AnalyticsPageSkeleton />;
   }
 
   if (!analytics) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No analytics data available</p>
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="No analytics data yet"
+        description="Start recording attendance to see insights, trends, and statistics here."
+        variant="default"
+      />
     );
   }
 
-  const trends = analytics.trends || {
-    daily_attendance: [],
-    course_popularity: [],
-    teacher_activity: [],
-  };
-
-  const dailyAttendanceData = (trends.daily_attendance || []).map(
-    ([date, students]: [string, number]) => ({
-      date: new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
-      fullDate: date,
-      students,
-    })
-  );
-
-  const courseDistributionData = Object.entries(analytics.by_course || {}).map(
-    ([course, data]: [string, any]) => ({
-      name: course,
-      value: data.total_students || 0,
-      classes: data.total_classes || 0,
-    })
-  );
-
-  const PIE_COLORS = [
-    "#3b82f6",
-    "#8b5cf6",
-    "#ec4899",
-    "#f59e0b",
-    "#10b981",
-    "#06b6d4",
-    "#ef4444",
-    "#6366f1",
-  ];
-
-  const topStudentsData = Object.entries(analytics.student_attendance || {})
-    .map(([rollNo, count]) => ({
-      rollNo,
-      count: count as number,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
-    .map((item) => ({
-      name: `Roll No: ${item.rollNo}`,
-      attendance: item.count,
-    }));
-
-  const teacherAttendanceVsClasses = Object.entries(analytics.by_teacher || {})
-    .map(([teacher, data]: [string, any]) => ({
-      name: teacher,
-      students: data.total_students || 0,
-      classes: data.total_classes || 0,
-      avgStudents: data.avg_students_per_class || 0,
-    }))
-    .sort((a, b) => b.classes - a.classes);
-
-  const attendanceByDate = Object.entries(analytics.by_date || {})
-    .map(([date, data]: [string, any]) => ({
-      date,
-      students: data.students || 0,
-      classes: data.classes || 0,
-      formattedDate: new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-    }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const maxAttendance = Math.max(...attendanceByDate.map((d) => d.students), 1);
-
-  const getHeatmapIntensity = (students: number) => {
-    if (students === 0) return 0;
-    const intensity = Math.ceil((students / maxAttendance) * 4);
-    return Math.min(intensity, 4);
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Analytics</h1>
-        <p className="text-muted-foreground mt-2">
-          Insights and statistics from attendance data
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Analytics</h1>
+          <p className="text-muted-foreground mt-2">
+            Insights and statistics from attendance data
+          </p>
+        </div>
+        <ExportButtons />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -269,9 +284,11 @@ export default function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-              No attendance data available
-            </div>
+            <EmptyState
+              title="No daily attendance data"
+              description="Attendance records will appear here once you start recording."
+              variant="chart"
+            />
           )}
         </CardContent>
       </Card>
@@ -338,9 +355,11 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-              No course distribution data available
-            </div>
+            <EmptyState
+              title="No course distribution yet"
+              description="Record attendance for different courses to see the breakdown here."
+              variant="chart"
+            />
           )}
         </CardContent>
       </Card>
@@ -405,9 +424,11 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-              No student attendance data available
-            </div>
+            <EmptyState
+              title="No student attendance data yet"
+              description="Top attendees will show here after attendance is recorded."
+              variant="chart"
+            />
           )}
         </CardContent>
       </Card>
@@ -495,9 +516,11 @@ export default function AnalyticsPage() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-              No teacher performance data available
-            </div>
+            <EmptyState
+              title="No teacher performance data yet"
+              description="Teacher stats will appear once attendance is recorded."
+              variant="chart"
+            />
           )}
         </CardContent>
       </Card>
@@ -567,9 +590,11 @@ export default function AnalyticsPage() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              No attendance calendar data available
-            </div>
+            <EmptyState
+              title="No calendar data yet"
+              description="Record attendance to see the heatmap by date."
+              variant="chart"
+            />
           )}
         </CardContent>
       </Card>

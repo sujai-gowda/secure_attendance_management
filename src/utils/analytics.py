@@ -255,6 +255,30 @@ def generate_attendance_report(blockchain: List[Block], format: str = "text") ->
     
     return "\n".join(report)
 
+def _serialize_export(obj: Any) -> Any:
+    if isinstance(obj, set):
+        return list(obj)
+    if hasattr(obj, "isoformat"):
+        return str(obj)
+    return str(obj)
+
+
+def get_analytics_export_content(blockchain: List[Block]) -> str:
+    analytics = get_attendance_analytics(blockchain)
+    health = get_blockchain_health(blockchain)
+    export_data = {
+        "generated_at": str(dt.datetime.now()),
+        "blockchain_stats": {
+            "total_blocks": len(blockchain),
+            "genesis_hash": blockchain[0].hash if blockchain else None,
+            "latest_hash": blockchain[-1].hash if blockchain else None
+        },
+        "analytics": analytics,
+        "health": health
+    }
+    return json.dumps(export_data, indent=2, default=_serialize_export)
+
+
 def export_analytics(
     blockchain: List[Block], filename: str = "blockchain_analytics.json"
 ) -> Tuple[bool, str]:
@@ -262,24 +286,9 @@ def export_analytics(
     Export comprehensive analytics to file
     """
     try:
-        analytics = get_attendance_analytics(blockchain)
-        health = get_blockchain_health(blockchain)
-        
-        export_data = {
-            "generated_at": str(dt.datetime.now()),
-            "blockchain_stats": {
-                "total_blocks": len(blockchain),
-                "genesis_hash": blockchain[0].hash if blockchain else None,
-                "latest_hash": blockchain[-1].hash if blockchain else None
-            },
-            "analytics": analytics,
-            "health": health
-        }
-        
-        with open(filename, 'w') as f:
-            json.dump(export_data, f, indent=2, default=str)
-        
+        content = get_analytics_export_content(blockchain)
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(content)
         return True, f"Analytics exported to {filename}"
-    
     except Exception as e:
         return False, f"Error exporting analytics: {str(e)}"

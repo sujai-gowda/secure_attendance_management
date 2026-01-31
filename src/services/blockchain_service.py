@@ -13,6 +13,8 @@ from src.blockchain.persistence import (
     save_blockchain,
     load_blockchain,
     export_blockchain_csv,
+    get_blockchain_csv_content,
+    get_blockchain_json_content,
     get_blockchain_backups,
     restore_from_backup,
     cleanup_old_backups
@@ -21,6 +23,7 @@ from src.utils.analytics import (
     get_attendance_analytics,
     generate_attendance_report,
     export_analytics,
+    get_analytics_export_content,
     get_blockchain_health
 )
 from src.config.config import Config
@@ -306,6 +309,24 @@ class BlockchainService:
         except Exception as e:
             logger.error(f"Error exporting data: {str(e)}", exc_info=True)
             return False, f"Error exporting data: {str(e)}"
+
+    def get_export_content(
+        self, format_type: str
+    ) -> Tuple[bool, Optional[str], str, str]:
+        try:
+            if format_type == "csv":
+                content = get_blockchain_csv_content(self.blockchain)
+                return True, content, "text/csv", "blockchain_export.csv"
+            if format_type == "analytics":
+                content = get_analytics_export_content(self.blockchain)
+                return True, content, "application/json", "blockchain_analytics.json"
+            if format_type == "json":
+                content = get_blockchain_json_content(self.blockchain)
+                return True, content, "application/json", "blockchain_export.json"
+            return False, None, "", ""
+        except Exception as e:
+            logger.error(f"Error getting export content: {str(e)}", exc_info=True)
+            return False, None, "", ""
 
     def reload_blockchain(self) -> Tuple[bool, str, int]:
         try:

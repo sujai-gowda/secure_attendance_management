@@ -5,7 +5,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Search, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, Search, CheckCircle2, XCircle, FileSearch } from 'lucide-react'
+import { RecordsResultsSkeleton } from '@/components/ui/page-skeletons'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ExportButtons } from '@/components/ExportButtons'
+import { getErrorMessage } from '@/helpers/error-messages'
 import { TEACHERS, COURSES, CLASSES, type Student } from '@/constants/attendance'
 import { apiService } from '@/services/api'
 
@@ -85,10 +89,11 @@ export default function RecordsPage() {
           description: 'No records found for the specified criteria',
         })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const { title, description } = getErrorMessage(error, 'records')
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to search records. Please try again.',
+        title,
+        description,
         variant: 'destructive',
       })
       setResults(null)
@@ -102,11 +107,14 @@ export default function RecordsPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">View Records</h1>
-        <p className="text-muted-foreground mt-2">
-          Search for attendance records in the blockchain
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">View Records</h1>
+          <p className="text-muted-foreground mt-2">
+            Search for attendance records in the blockchain
+          </p>
+        </div>
+        <ExportButtons />
       </div>
 
       <Card className="glass-card border-white/10">
@@ -185,18 +193,22 @@ export default function RecordsPage() {
         </CardContent>
       </Card>
 
-      {results !== null && (
+      {(loading || results !== null) && (
         <Card className="glass-card border-white/10">
           <CardHeader>
             <CardTitle>Search Results</CardTitle>
             <CardDescription>
-              {results.length > 0 
-                ? `${presentCount} present, ${absentCount} absent out of ${results.length} students`
-                : 'No students found'}
+              {loading
+                ? 'Searching...'
+                : results !== null && results.length > 0
+                  ? `${presentCount} present, ${absentCount} absent out of ${results.length} students`
+                  : 'No students found'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {results.length > 0 ? (
+            {loading ? (
+              <RecordsResultsSkeleton rows={6} />
+            ) : results !== null && results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((student, index) => (
                   <div
@@ -232,9 +244,12 @@ export default function RecordsPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No records found for the specified criteria
-              </p>
+              <EmptyState
+                icon={FileSearch}
+                title="No records for this search"
+                description="Try a different teacher, course, date, or class. Records are added when attendance is submitted."
+                variant="compact"
+              />
             )}
           </CardContent>
         </Card>
